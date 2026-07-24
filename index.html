@@ -25,11 +25,28 @@
         .input-score { width: 55px; text-align: center; padding: 6px; border: 1px solid #cccccc; border-radius: 6px; font-size: 14px; font-weight: 700; background: #fafafa; color: #242424; }
         .input-score:focus { border-color: #3d195a; outline: none; background: #ffffff; }
         .section-split { margin-top: 50px; border-top: 3px solid #3d195a; padding-top: 25px; clear: both; }
-        .fixture-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #f0f0f0; background: #ffffff; margin: 6px 0; border-radius: 6px; border: 1px solid #e3e3e3; }
+        
+        /* Layout Updates for Interactive Named Comments */
+        .fixture-block { background: #ffffff; margin: 15px 0; border-radius: 8px; border: 1px solid #e3e3e3; overflow: hidden; }
+        .fixture-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #ffffff; }
         .team-label { width: 40%; font-weight: 600; font-size: 14px; color: #242424; }
         .team-label.home { text-align: right; }
         .team-label.away { text-align: left; }
         .vs-block { width: 20%; text-align: center; display: flex; justify-content: center; gap: 10px; align-items: center; font-weight: 700; color: #767676; font-size: 12px; text-transform: uppercase; }
+        
+        /* Comment Box Styles */
+        .comments-section { background: #fcfcfc; border-top: 1px dashed #e9e9e9; padding: 12px 20px; }
+        .comments-log { max-height: 1200px; font-size: 13px; color: #444; margin-bottom: 8px; line-height: 1.5; }
+        .comment-item { margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid #f0f0f0; }
+        .comment-author { font-weight: 700; color: #3d195a; margin-right: 5px; }
+        
+        .comment-inputs { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+        .input-name { width: 120px; border: 1px solid #e3e3e3; border-radius: 4px; padding: 6px 10px; font-size: 13px; background: #ffffff; }
+        .input-comment { flex-grow: 1; border: 1px solid #e3e3e3; border-radius: 4px; padding: 6px 10px; font-size: 13px; background: #ffffff; }
+        .input-name:focus, .input-comment:focus { border-color: #3d195a; outline: none; }
+        .btn-comment { background: #3d195a; color: white; border: none; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: opacity 0.2s; }
+        .btn-comment:hover { opacity: 0.9; }
+
         .badge { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; font-weight: 700; font-size: 11px; color: white; margin: 0 3px; text-transform: uppercase; }
         .badge-w { background-color: #00875a; } 
         .badge-l { background-color: #e34c3c; } 
@@ -67,7 +84,7 @@
     <div class="section-split">
         <div class="pl-header">
             <h2>Fixtures & Results Input</h2>
-            <p class="subtitle">To edit, type your password anywhere on screen. Viewers cannot alter anything.</p>
+            <p class="subtitle">To edit scores, type your password anywhere on screen. Members can type their name and post comments—they save to the cloud instantly!</p>
         </div>
         <div id="fixtures-container"></div>
     </div>
@@ -120,11 +137,16 @@
         for (let round = 1; round < n; round++) {
             for (let i = 0; i < n / 2; i++) {
                 let home = pool[i]; let away = pool[n - 1 - i];
-                if (round % 2 === 0) {
-                    fixtures.push({ id: matchId++, round: round, home: home, away: away, homeScore: '', awayScore: '' });
-                } else {
-                    fixtures.push({ id: matchId++, round: round, home: away, away: home, homeScore: '', awayScore: '' });
-                }
+                let isRoundEven = (round % 2 === 0);
+                fixtures.push({ 
+                    id: matchId++, 
+                    round: round, 
+                    home: isRoundEven ? home : away, 
+                    away: isRoundEven ? away : home, 
+                    homeScore: '', 
+                    awayScore: '',
+                    comments: [] 
+                });
             }
             pool.splice(1, 0, pool.pop());
         }
@@ -143,7 +165,7 @@
             }
 
             if (Array.isArray(cleanData) && cleanData.length > 0) {
-                fixtures = cleanData;
+                fixtures = cleanData.map(f => ({...f, comments: f.comments || []}));
                 document.getElementById('status-text').innerText = "✅ Table connected to live database.";
                 document.getElementById('status-text').style.color = "#00875a";
             } else {
@@ -160,10 +182,7 @@
         }
     }
 
-    async function saveToCloud() {
-        if (!isAdmin) return;
-        const btn = document.getElementById('save-btn');
-        btn.innerText = "⏳ Saving...";
+    async function saveToCloud(silent = false) {
         try {
             let res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                 method: "PUT",
@@ -173,15 +192,12 @@
                 },
                 body: JSON.stringify({ fixtures: fixtures })
             });
-            if (res.ok) {
-                alert("☁️ Saved successfully! All members will instantly see these updates.");
-            } else {
-                alert("❌ Database sync failed. Check your API settings.");
+            if (res.ok && !silent) {
+                alert("☁️ Saved successfully!");
             }
         } catch (err) {
-            alert("❌ Database sync error. Try again.");
+            if(!silent) alert("❌ Database sync error.");
         }
-        btn.innerText = "☁️ Save Changes Live";
     }
 
     function recalculateLeague() {
@@ -251,11 +267,37 @@
             roundDiv.innerHTML = `<h3 style="color:#3d195a; font-size:16px; font-weight:700; margin-top:30px; border-bottom:1px solid #e3e3e3; padding-bottom:6px;">Matchday ${r}</h3>`;
             let roundMatches = fixtures.filter(f => f.round === r);
             roundMatches.forEach(m => {
-                let div = document.createElement('div');
-                div.className = 'fixture-row';
+                let block = document.createElement('div');
+                block.className = 'fixture-block';
+                
                 let disabledAttr = isAdmin ? "" : "disabled";
-                div.innerHTML = `<span class="team-label home">${m.home}</span><span class="vs-block"><input type="text" class="input-score" ${disabledAttr} value="${m.homeScore}" oninput="updateScore(${m.id}, 'home', this.value)"> vs <input type="text" class="input-score" ${disabledAttr} value="${m.awayScore}" oninput="updateScore(${m.id}, 'away', this.value)"></span><span class="team-label away">${m.away}</span>`;
-                roundDiv.appendChild(div);
+                
+                let commentsHTML = m.comments.map(c => `
+                    <div class="comment-item">
+                        <span class="comment-author">[${c.user}]:</span><span>${c.text}</span>
+                    </div>
+                `).join('');
+
+                block.innerHTML = `
+                    <div class="fixture-row">
+                        <span class="team-label home">${m.home}</span>
+                        <span class="vs-block">
+                            <input type="text" class="input-score" ${disabledAttr} value="${m.homeScore}" oninput="updateScore(${m.id}, 'home', this.value)"> 
+                            vs 
+                            <input type="text" class="input-score" ${disabledAttr} value="${m.awayScore}" oninput="updateScore(${m.id}, 'away', this.value)">
+                        </span>
+                        <span class="team-label away">${m.away}</span>
+                    </div>
+                    <div class="comments-section">
+                        <div class="comments-log" id="log-${m.id}">${commentsHTML || '<i style="color:#aaa;">No notes yet...</i>'}</div>
+                        <div class="comment-inputs">
+                            <input type="text" class="input-name" id="name-${m.id}" placeholder="Your Name">
+                            <input type="text" class="input-comment" id="msg-${m.id}" placeholder="Add match note or banter...">
+                            <button class="btn-comment" id="btn-post-${m.id}" onclick="postComment(${m.id})">Post</button>
+                        </div>
+                    </div>
+                `;
+                roundDiv.appendChild(block);
             });
             container.appendChild(roundDiv);
         }
@@ -268,8 +310,35 @@
         recalculateLeague();
     };
 
+    window.postComment = async function(id) {
+        let nameEl = document.getElementById(`name-${id}`);
+        let msgEl = document.getElementById(`msg-${id}`);
+        let postBtn = document.getElementById(`btn-post-${id}`);
+        
+        let userName = nameEl.value.trim();
+        let userMsg = msgEl.value.trim();
+        
+        if (!userName || !userMsg) {
+            alert("Please fill out both your name and comment field before posting!");
+            return;
+        }
+        
+        // Temporarily disable the button to show it's updating live
+        postBtn.innerText = "⏳...";
+        postBtn.disabled = true;
+        
+        let match = fixtures.find(f => f.id === id);
+        match.comments.push({ user: userName, text: userMsg });
+        
+        // Push background data directly to JSONbin 
+        await saveToCloud(true);
+        
+        // Re-render to clear fields and present updated array cleanly
+        renderFixtures();
+    };
+
     window.resetAllData = function() {
-        if (confirm("⚠️ Clear all database values and reset the season schedule?")) {
+        if (confirm("⚠️ Clear all database values, comments, and reset the season schedule?")) {
             generateFixtures();
             recalculateLeague();
             renderFixtures();
