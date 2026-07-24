@@ -76,7 +76,7 @@
 <script>
     // HARDCODED LIVE DATABASE CONFIGURATION
     const BIN_ID = "6a632995da38895dfe88fbfc";
-    const API_KEY = "$2a$10$LnRR7.WaC/F04X0yPuJ0XedNXXhZ/Y2nb8erhagnR3NQCTjIskqya";
+    const API_KEY = "$2a$10$LnRR7.WaC/F04X0yPuJ0XedNXXhZ/Y2nb8erhagnR3NQCTjIskqya"; 
     const ADMIN_PASSWORD = "admin"; 
 
     // FIXED SCHEDULING POSITIONS
@@ -137,7 +137,6 @@
             });
             let data = await res.json();
             
-            // Fixed validation layer: Handles both raw arrays and nested record configurations cleanly
             let cleanData = data.record;
             if (cleanData && typeof cleanData === 'object' && !Array.isArray(cleanData) && cleanData.fixtures) {
                 cleanData = cleanData.fixtures;
@@ -170,10 +169,9 @@
                 method: "PUT",
                 headers: { 
                     "Content-Type": "application/json", 
-                    "X-Master-Key": API_KEY,
-                    "X-Bin-Versioning": "false"
+                    "X-Master-Key": API_KEY
                 },
-                body: JSON.stringify(fixtures)
+                body: JSON.stringify({ fixtures: fixtures })
             });
             if (res.ok) {
                 alert("☁️ Saved successfully! All members will instantly see these updates.");
