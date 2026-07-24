@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official League Standings Manager</title>
+    <style>
+        body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; background-color: #f7f7f7; margin: 0; padding: 30px 20px; color: #242424; }
+        .container { max-width: 1200px; margin: 0 auto; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .pl-header { border-bottom: 3px solid #3d195a; padding-bottom: 15px; margin-bottom: 25px; position: relative; }
+        h2 { margin: 0; color: #3d195a; font-size: 26px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+        .subtitle { margin: 5px 0 0 0; font-size: 13px; color: #767676; font-weight: 500; }
+        .btn-clear { background-color: #ff0055; color: white; border: none; padding: 8px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; float: right; transition: background 0.2s; font-size: 13px; }
+        .btn-clear:hover { background-color: #d00044; }
+        .btn-save { background-color: #00875a; color: white; border: none; padding: 8px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; float: right; margin-right: 10px; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background-color: #ffffff; color: #767676; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e3e3e3; padding: 12px 8px; text-align: center; }
+        th:nth-child(2), td:nth-child(2) { text-align: left; width: 32%; padding-left: 15px; font-weight: 600; color: #242424; }
+        td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #e3e3e3; font-size: 14px; color: #242424; }
+        tr:hover { background-color: #f9f9f9; }
+        tr td:first-child { border-left: 4px solid transparent; }
+        .rank-row-1 td:first-child, .rank-row-2 td:first-child, .rank-row-3 td:first-child, .rank-row-4 td:first-child, .rank-row-5 td:first-child { border-left: 4px solid #4285f4 !important; } 
+        .rank-row-20 td:first-child, .rank-row-21 td:first-child, .rank-row-22 td:first-child, .rank-row-23 td:first-child, .rank-row-24 td:first-child { border-left: 4px solid #ea4335 !important; } 
+        .pts-col { font-weight: 700; color: #242424; }
+        .input-score { width: 55px; text-align: center; padding: 6px; border: 1px solid #cccccc; border-radius: 6px; font-size: 14px; font-weight: 700; background: #fafafa; color: #242424; }
+        .input-score:focus { border-color: #3d195a; outline: none; background: #ffffff; }
+        .section-split { margin-top: 50px; border-top: 3px solid #3d195a; padding-top: 25px; clear: both; }
+        .fixture-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #f0f0f0; background: #ffffff; margin: 6px 0; border-radius: 6px; border: 1px solid #e3e3e3; }
+        .team-label { width: 40%; font-weight: 600; font-size: 14px; color: #242424; }
+        .team-label.home { text-align: right; }
+        .team-label.away { text-align: left; }
+        .vs-block { width: 20%; text-align: center; display: flex; justify-content: center; gap: 10px; align-items: center; font-weight: 700; color: #767676; font-size: 12px; text-transform: uppercase; }
+        .badge { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; font-weight: 700; font-size: 11px; color: white; margin: 0 3px; text-transform: uppercase; }
+        .badge-w { background-color: #00875a; } 
+        .badge-l { background-color: #e34c3c; } 
+        .badge-d { background-color: #7a7a7a; } 
+        .admin-only { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="pl-header">
+        <button class="btn-clear admin-only" onclick="resetAllData()">Reset Season</button>
+        <button class="btn-save admin-only" id="save-btn" onclick="saveToCloud()">☁️ Save Changes Live</button>
+        <h2>League Table Standings</h2>
+        <p class="subtitle" id="status-text">🔄 Loading live data from global server...</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Pos</th>
+                <th>Team</th>
+                <th>Pl</th>
+                <th>W</th>
+                <th>D</th>
+                <th>L</th>
+                <th>GD</th>
+                <th>Pts</th>
+                <th>Form</th>
+            </tr>
+        </thead>
+        <tbody id="league-body"></tbody>
+    </table>
+
+    <div class="section-split">
+        <div class="pl-header">
+            <h2>Fixtures & Results Input</h2>
+            <p class="subtitle">To edit, type your password anywhere on screen. Viewers cannot alter anything.</p>
+        </div>
+        <div id="fixtures-container"></div>
+    </div>
+</div>
+
+<script>
+    // HARDCODED LIVE DATABASE CONFIGURATION
+    const BIN_ID = "6a632995da38895dfe88fbfc";
+    const API_KEY = "$2a$10$LnRR7.WaC/F04X0yPuJ0XedNXXhZ/Y2nb8erhagnR3NQCTjIskqya";
+    const ADMIN_PASSWORD = "admin"; // Change this text to your preferred password string
+
+    // FIXED SCHEDULING POSITIONS (Keeps original matchup structures identical)
+    const originalTeams = [
+        "All stars FC", "GGMU", "Manifest", "AYANFE", "BLACK HOLE (investthoirltd)", "BRENTFORD",
+        "CITYZENS FC (cole-lyn)", "ARSENAL", "DON NATION", "DON VIBES",
+        "DE FRANCE", "KAYDOT OPEYEMI", "LEEDS UNITED", "LIVERPOOL (collin)", "MANCHESTER UGANDA (success)",
+        "OKIKOLA", "Orlando pirates FC", "REAL MADRID (Alpha Boy)", "REAL MADRID CF", "SISONKE (Khenzo Hloks)",
+        "SKANKAMANKA (Sagalino)", "TITUS AWOTWE PLAT (Galileo Galile)", "Savage", "YANITED (Boniface)"
+    ];
+
+    const alphabeticalTeams = [...originalTeams].sort();
+    let fixtures = [];
+    let standings = {};
+    let isAdmin = false;
+
+    // Direct hidden keyboard password monitor
+    let typedChars = "";
+    window.addEventListener("keydown", (e) => {
+        typedChars += e.key;
+        if (typedChars.includes(ADMIN_PASSWORD)) {
+            isAdmin = true;
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+            document.querySelectorAll('.input-score').forEach(el => el.removeAttribute('disabled'));
+            alert("🔒 Admin mode activated! You can now edit scores and sync live data.");
+            typedChars = "";
+        }
+        if (typedChars.length > 20) typedChars = typedChars.slice(-10);
+    });
+
+    function initStandings() {
+        alphabeticalTeams.forEach(team => {
+            standings[team] = { name: team, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0, form: [] };
+        });
+    }
+
+    function generateFixtures() {
+        let pool = [...originalTeams];
+        let n = pool.length;
+        let matchId = 0;
+        for (let round = 1; round < n; round++) {
+            for (let i = 0; i < n / 2; i++) {
+                let home = pool[i]; let away = pool[n - 1 - i];
+                if (round % 2 === 0) {
+                    fixtures.push({ id: matchId++, round: round, home: home, away: away, homeScore: '', awayScore: '' });
+                } else {
+                    fixtures.push({ id: matchId++, round: round, home: away, away: home, homeScore: '', awayScore: '' });
+                }
+            }
+            pool.splice(1, 0, pool.pop());
+        }
+    }
+
+    async function loadFromCloud() {
+        try {
+            let res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                headers: { "X-Master-Key": API_KEY }
+            });
+            let data = await res.json();
+            
+            // Check if database contains true league fixtures or just initial setup text object
+            if (data.record && Array.isArray(data.record) && data.record.length > 0) {
+                fixtures = data.record;
+                document.getElementById('status-text').innerText = "✅ Table connected to live database.";
+            } else {
+                generateFixtures();
+                document.getElementById('status-text').innerText = "⭐ Fresh cloud matrix initialized.";
+            }
+            recalculateLeague();
+            renderFixtures();
+        } catch (err) {
+            document.getElementById('status-text').innerText = "❌ Connection failed. Operating in local mode.";
+            generateFixtures();
+            recalculateLeague();
+            renderFixtures();
+        }
+    }
+
+    async function saveToCloud() {
+        if (!isAdmin) return;
+        const btn = document.getElementById('save-btn');
+        btn.innerText = "⏳ Saving...";
+        try {
+            await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "X-Master-Key": API_KEY },
+                body: JSON.stringify(fixtures)
+            });
+            alert("☁️ Saved successfully! All members will instantly see these updates.");
+        } catch (err) {
+            alert("❌ Database sync error. Try again.");
+        }
+        btn.innerText = "☁️ Save Changes Live";
+    }
+
+    function recalculateLeague() {
+        initStandings();
+        fixtures.forEach(f => {
+            if (!standings[f.home] || !standings[f.away]) return;
+            let hsRaw = f.homeScore.toString().trim().toLowerCase();
+            let asRaw = f.awayScore.toString().trim().toLowerCase();
+
+            if (hsRaw === 'l' && asRaw === 'l') {
+                standings[f.home].p++; standings[f.home].l++; standings[f.home].ga += 3; standings[f.home].form.push('L');
+                standings[f.away].p++; standings[f.away].l++; standings[f.away].ga += 3; standings[f.away].form.push('L');
+            } else if (hsRaw === 'l') {
+                standings[f.home].p++; standings[f.home].l++; standings[f.home].ga += 3; standings[f.home].form.push('L');
+                standings[f.away].p++; standings[f.away].w++; standings[f.away].gf += 3; standings[f.away].pts += 3; standings[f.away].form.push('W');
+            } else if (asRaw === 'l') {
+                standings[f.away].p++; standings[f.away].l++; standings[f.away].ga += 3; standings[f.away].form.push('L');
+                standings[f.home].p++; standings[f.home].w++; standings[f.home].gf += 3; standings[f.home].pts += 3; standings[f.home].form.push('W');
+            } else if (f.homeScore !== '' && f.homeScore !== null && f.awayScore !== '' && f.awayScore !== null) {
+                let hs = parseInt(f.homeScore); let as = parseInt(f.awayScore);
+                if (!isNaN(hs) && !isNaN(as)) {
+                    standings[f.home].p++; standings[f.away].p++;
+                    standings[f.home].gf += hs; standings[f.home].ga += as;
+                    standings[f.away].gf += as; standings[f.away].ga += hs;
+                    if (hs > as) {
+                        standings[f.home].w++; standings[f.home].pts += 3; standings[f.home].form.push('W');
+                        standings[f.away].l++; standings[f.away].form.push('L');
+                    } else if (hs < as) {
+                        standings[f.away].w++; standings[f.away].pts += 3; standings[f.away].form.push('W');
+                        standings[f.home].l++; standings[f.home].form.push('L');
+                    } else {
+                        standings[f.home].d++; standings[f.home].pts += 1; standings[f.home].form.push('D');
+                        standings[f.away].d++; standings[f.away].pts += 1; standings[f.away].form.push('D');
+                    }
+                }
+            }
+        });
+
+        Object.keys(standings).forEach(t => { standings[t].gd = standings[t].gf - standings[t].ga; });
+        let sorted = Object.values(standings).sort((a, b) => {
+            if (b.pts !== a.pts) return b.pts - a.pts;
+            if (b.gd !== a.gd) return b.gd - a.gd;
+            if (a.p !== b.p) return a.p - b.p; 
+            return a.name.localeCompare(b.name);
+        });
+        renderTable(sorted);
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('league-body');
+        tbody.innerHTML = '';
+        data.forEach((row, index) => {
+            let rank = index + 1;
+            let formBadges = row.form.slice(-5).map(result => `<span class="badge badge-${result.toLowerCase()}">${result}</span>`).join('') || '-';
+            let tr = document.createElement('tr');
+            tr.className = `rank-row-${rank}`;
+            tr.innerHTML = `<td><strong>${rank}</strong></td><td>${row.name}</td><td>${row.p}</td><td>${row.w}</td><td>${row.d}</td><td>${row.l}</td><td>${row.gd > 0 ? '+' + row.gd : row.gd}</td><td class="pts-col">${row.pts}</td><td>${formBadges}</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderFixtures() {
+        const container = document.getElementById('fixtures-container');
+        container.innerHTML = '';
+        for (let r = 1; r <= 23; r++) {
+            let roundDiv = document.createElement('div');
+            roundDiv.innerHTML = `<h3 style="color:#3d195a; font-size:16px; font-weight:700; margin-top:30px; border-bottom:1px solid #e3e3e3; padding-bottom:6px;">Matchday ${r}</h3>`;
+            let roundMatches = fixtures.filter(f => f.round === r);
+            roundMatches.forEach(m => {
+                let div = document.createElement('div');
+                div.className = 'fixture-row';
+                let disabledAttr = isAdmin ? "" : "disabled";
+                div.innerHTML = `<span class="team-label home">${m.home}</span><span class="vs-block"><input type="text" class="input-score" ${disabledAttr} value="${m.homeScore}" oninput="updateScore(${m.id}, 'home', this.value)"> vs <input type="text" class="input-score" ${disabledAttr} value="${m.awayScore}" oninput="updateScore(${m.id}, 'away', this.value)"></span><span class="team-label away">${m.away}</span>`;
+                roundDiv.appendChild(div);
+            });
+            container.appendChild(roundDiv);
+        }
+    }
+
+    window.updateScore = function(id, side, val) {
+        let match = fixtures.find(f => f.id === id);
+        if (side === 'home') match.homeScore = val;
+        if (side === 'away') match.awayScore = val;
+        recalculateLeague();
+    };
+
+    window.resetAllData = function() {
+        if (confirm("⚠️ Clear all database values and reset the season schedule?")) {
+            fixtures = [];
+            generateFixtures();
+            recalculateLeague();
+            renderFixtures();
+            saveToCloud();
+        }
+    };
+
+    loadFromCloud();
+</script>
+</body>
+</html>
