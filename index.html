@@ -77,9 +77,9 @@
     // HARDCODED LIVE DATABASE CONFIGURATION
     const BIN_ID = "6a632995da38895dfe88fbfc";
     const API_KEY = "$2a$10$LnRR7.WaC/F04X0yPuJ0XedNXXhZ/Y2nb8erhagnR3NQCTjIskqya";
-    const ADMIN_PASSWORD = "admin"; // Change this text to your preferred password string
+    const ADMIN_PASSWORD = "admin"; 
 
-    // FIXED SCHEDULING POSITIONS (Keeps original matchup structures identical)
+    // FIXED SCHEDULING POSITIONS
     const originalTeams = [
         "All stars FC", "GGMU", "Manifest", "AYANFE", "BLACK HOLE (investthoirltd)", "BRENTFORD",
         "CITYZENS FC (cole-lyn)", "ARSENAL", "DON NATION", "DON VIBES",
@@ -93,7 +93,6 @@
     let standings = {};
     let isAdmin = false;
 
-    // Direct hidden keyboard password monitor
     let typedChars = "";
     window.addEventListener("keydown", (e) => {
         typedChars += e.key;
@@ -117,6 +116,7 @@
         let pool = [...originalTeams];
         let n = pool.length;
         let matchId = 0;
+        fixtures = []; 
         for (let round = 1; round < n; round++) {
             for (let i = 0; i < n / 2; i++) {
                 let home = pool[i]; let away = pool[n - 1 - i];
@@ -137,10 +137,16 @@
             });
             let data = await res.json();
             
-            // Check if database contains true league fixtures or just initial setup text object
-            if (data.record && Array.isArray(data.record) && data.record.length > 0) {
-                fixtures = data.record;
+            // Fixed validation layer: Handles both raw arrays and nested record configurations cleanly
+            let cleanData = data.record;
+            if (cleanData && typeof cleanData === 'object' && !Array.isArray(cleanData) && cleanData.fixtures) {
+                cleanData = cleanData.fixtures;
+            }
+
+            if (Array.isArray(cleanData) && cleanData.length > 0) {
+                fixtures = cleanData;
                 document.getElementById('status-text').innerText = "✅ Table connected to live database.";
+                document.getElementById('status-text').style.color = "#00875a";
             } else {
                 generateFixtures();
                 document.getElementById('status-text').innerText = "⭐ Fresh cloud matrix initialized.";
@@ -160,12 +166,20 @@
         const btn = document.getElementById('save-btn');
         btn.innerText = "⏳ Saving...";
         try {
-            await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+            let res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json", "X-Master-Key": API_KEY },
+                headers: { 
+                    "Content-Type": "application/json", 
+                    "X-Master-Key": API_KEY,
+                    "X-Bin-Versioning": "false"
+                },
                 body: JSON.stringify(fixtures)
             });
-            alert("☁️ Saved successfully! All members will instantly see these updates.");
+            if (res.ok) {
+                alert("☁️ Saved successfully! All members will instantly see these updates.");
+            } else {
+                alert("❌ Database sync failed. Check your API settings.");
+            }
         } catch (err) {
             alert("❌ Database sync error. Try again.");
         }
@@ -258,7 +272,6 @@
 
     window.resetAllData = function() {
         if (confirm("⚠️ Clear all database values and reset the season schedule?")) {
-            fixtures = [];
             generateFixtures();
             recalculateLeague();
             renderFixtures();
