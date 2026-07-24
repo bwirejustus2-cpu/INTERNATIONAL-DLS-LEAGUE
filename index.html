@@ -24,9 +24,12 @@
         .pts-col { font-weight: 700; color: #242424; }
         .input-score { width: 55px; text-align: center; padding: 6px; border: 1px solid #cccccc; border-radius: 6px; font-size: 14px; font-weight: 700; background: #fafafa; color: #242424; }
         .input-score:focus { border-color: #3d195a; outline: none; background: #ffffff; }
-        .section-split { margin-top: 50px; border-top: 3px solid #3d195a; padding-top: 25px; clear: both; }
+        .section-split { margin-top: 40px; border-top: 3px solid #3d195a; padding-top: 25px; clear: both; }
         
-        /* Layout Updates for Interactive Named Comments */
+        /* General Chat & Comments UI */
+        .general-chat-box { background: #fcfcfc; border: 1px solid #3d195a; border-radius: 8px; padding: 20px; margin-top: 20px; box-shadow: 0 2px 8px rgba(61, 25, 90, 0.05); }
+        .general-chat-log { max-height: 250px; overflow-y: auto; font-size: 14px; color: #444; margin-bottom: 12px; line-height: 1.6; padding: 10px; background: #fff; border: 1px solid #e3e3e3; border-radius: 6px; }
+        
         .fixture-block { background: #ffffff; margin: 15px 0; border-radius: 8px; border: 1px solid #e3e3e3; overflow: hidden; }
         .fixture-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #ffffff; }
         .team-label { width: 40%; font-weight: 600; font-size: 14px; color: #242424; }
@@ -34,18 +37,19 @@
         .team-label.away { text-align: left; }
         .vs-block { width: 20%; text-align: center; display: flex; justify-content: center; gap: 10px; align-items: center; font-weight: 700; color: #767676; font-size: 12px; text-transform: uppercase; }
         
-        /* Comment Box Styles */
         .comments-section { background: #fcfcfc; border-top: 1px dashed #e9e9e9; padding: 12px 20px; }
-        .comments-log { max-height: 1200px; font-size: 13px; color: #444; margin-bottom: 8px; line-height: 1.5; }
-        .comment-item { margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid #f0f0f0; }
+        .comments-log { max-height: 150px; overflow-y: auto; font-size: 13px; color: #444; margin-bottom: 8px; line-height: 1.5; }
+        .comment-item { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0; word-wrap: break-word; }
         .comment-author { font-weight: 700; color: #3d195a; margin-right: 5px; }
+        .comment-time { font-size: 10px; color: #aaa; margin-left: 6px; }
         
         .comment-inputs { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
-        .input-name { width: 120px; border: 1px solid #e3e3e3; border-radius: 4px; padding: 6px 10px; font-size: 13px; background: #ffffff; }
-        .input-comment { flex-grow: 1; border: 1px solid #e3e3e3; border-radius: 4px; padding: 6px 10px; font-size: 13px; background: #ffffff; }
+        .input-name { width: 130px; border: 1px solid #e3e3e3; border-radius: 4px; padding: 8px 10px; font-size: 13px; background: #ffffff; }
+        .input-comment { flex-grow: 1; border: 1px solid #e3e3e3; border-radius: 4px; padding: 8px 10px; font-size: 13px; background: #ffffff; }
         .input-name:focus, .input-comment:focus { border-color: #3d195a; outline: none; }
-        .btn-comment { background: #3d195a; color: white; border: none; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: opacity 0.2s; }
+        .btn-comment { background: #3d195a; color: white; border: none; padding: 8px 16px; font-size: 13px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; }
         .btn-comment:hover { opacity: 0.9; }
+        .btn-comment:disabled { background: #aaa; cursor: not-allowed; }
 
         .badge { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; font-weight: 700; font-size: 11px; color: white; margin: 0 3px; text-transform: uppercase; }
         .badge-w { background-color: #00875a; } 
@@ -81,10 +85,22 @@
         <tbody id="league-body"></tbody>
     </table>
 
+    <div class="general-chat-box">
+        <h3 style="margin: 0 0 10px 0; color: #3d195a; font-size: 18px; text-transform: uppercase;">💬 League General Discussion</h3>
+        <div class="general-chat-log" id="general-chat-log">
+            <i style="color:#aaa;">Loading conversation...</i>
+        </div>
+        <div class="comment-inputs">
+            <input type="text" class="input-name" id="gen-name" placeholder="Your Name">
+            <input type="text" class="input-comment" id="gen-msg" placeholder="Share your views, updates, or general banter...">
+            <button class="btn-comment" id="btn-gen-post" onclick="postGeneralComment()">Send</button>
+        </div>
+    </div>
+
     <div class="section-split">
         <div class="pl-header">
             <h2>Fixtures & Results Input</h2>
-            <p class="subtitle">To edit scores, type your password anywhere on screen. Members can type their name and post comments—they save to the cloud instantly!</p>
+            <p class="subtitle">To edit scores, type your password anywhere on screen. Members can submit comments anywhere—they save instantly!</p>
         </div>
         <div id="fixtures-container"></div>
     </div>
@@ -107,6 +123,7 @@
 
     const alphabeticalTeams = [...originalTeams].sort();
     let fixtures = [];
+    let generalChat = [];
     let standings = {};
     let isAdmin = false;
 
@@ -158,26 +175,33 @@
                 headers: { "X-Master-Key": API_KEY }
             });
             let data = await res.json();
+            let record = data.record || {};
             
-            let cleanData = data.record;
-            if (cleanData && typeof cleanData === 'object' && !Array.isArray(cleanData) && cleanData.fixtures) {
-                cleanData = cleanData.fixtures;
+            if (Array.isArray(record)) {
+                fixtures = record.map(f => ({...f, comments: f.comments || []}));
+                generalChat = [];
+            } else {
+                fixtures = (record.fixtures || []).map(f => ({...f, comments: f.comments || []}));
+                generalChat = record.generalChat || [];
             }
 
-            if (Array.isArray(cleanData) && cleanData.length > 0) {
-                fixtures = cleanData.map(f => ({...f, comments: f.comments || []}));
-                document.getElementById('status-text').innerText = "✅ Table connected to live database.";
-                document.getElementById('status-text').style.color = "#00875a";
-            } else {
+            if (fixtures.length === 0) {
                 generateFixtures();
                 document.getElementById('status-text').innerText = "⭐ Fresh cloud matrix initialized.";
+            } else {
+                document.getElementById('status-text').innerText = "✅ Table connected to live database.";
+                document.getElementById('status-text').style.color = "#00875a";
             }
+            
             recalculateLeague();
+            renderGeneralChat();
             renderFixtures();
         } catch (err) {
             document.getElementById('status-text').innerText = "❌ Connection failed. Operating in local mode.";
             generateFixtures();
+            generalChat = [];
             recalculateLeague();
+            renderGeneralChat();
             renderFixtures();
         }
     }
@@ -190,7 +214,7 @@
                     "Content-Type": "application/json", 
                     "X-Master-Key": API_KEY
                 },
-                body: JSON.stringify({ fixtures: fixtures })
+                body: JSON.stringify({ fixtures: fixtures, generalChat: generalChat })
             });
             if (res.ok && !silent) {
                 alert("☁️ Saved successfully!");
@@ -259,6 +283,21 @@
         });
     }
 
+    function renderGeneralChat() {
+        const logEl = document.getElementById('general-chat-log');
+        if (generalChat.length === 0) {
+            logEl.innerHTML = '<i style="color:#aaa;">No general discussion topics posted yet. Be the first!</i>';
+            return;
+        }
+        logEl.innerHTML = generalChat.map(c => `
+            <div class="comment-item">
+                <span class="comment-author">[${c.user}]:</span><span>${c.text}</span>
+                <span class="comment-time">${c.time || ''}</span>
+            </div>
+        `).join('');
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
     function renderFixtures() {
         const container = document.getElementById('fixtures-container');
         container.innerHTML = '';
@@ -275,6 +314,7 @@
                 let commentsHTML = m.comments.map(c => `
                     <div class="comment-item">
                         <span class="comment-author">[${c.user}]:</span><span>${c.text}</span>
+                        <span class="comment-time">${c.time || ''}</span>
                     </div>
                 `).join('');
 
@@ -289,10 +329,10 @@
                         <span class="team-label away">${m.away}</span>
                     </div>
                     <div class="comments-section">
-                        <div class="comments-log" id="log-${m.id}">${commentsHTML || '<i style="color:#aaa;">No notes yet...</i>'}</div>
+                        <div class="comments-log" id="log-${m.id}">${commentsHTML || '<i style="color:#aaa;">No comments yet...</i>'}</div>
                         <div class="comment-inputs">
                             <input type="text" class="input-name" id="name-${m.id}" placeholder="Your Name">
-                            <input type="text" class="input-comment" id="msg-${m.id}" placeholder="Add match note or banter...">
+                            <input type="text" class="input-comment" id="msg-${m.id}" placeholder="Add a comment or banter...">
                             <button class="btn-comment" id="btn-post-${m.id}" onclick="postComment(${m.id})">Post</button>
                         </div>
                     </div>
@@ -310,6 +350,34 @@
         recalculateLeague();
     };
 
+    window.postGeneralComment = async function() {
+        let nameEl = document.getElementById('gen-name');
+        let msgEl = document.getElementById('gen-msg');
+        let postBtn = document.getElementById('btn-gen-post');
+        
+        let userName = nameEl.value.trim();
+        let userMsg = msgEl.value.trim();
+        
+        if (!userName || !userMsg) {
+            alert("Please fill out both your name and comment field before sending!");
+            return;
+        }
+        
+        postBtn.innerText = "⏳...";
+        postBtn.disabled = true;
+        
+        let timeString = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        generalChat.push({ user: userName, text: userMsg, time: timeString });
+        
+        await saveToCloud(true);
+        
+        msgEl.value = ""; 
+        postBtn.innerText = "Send";
+        postBtn.disabled = false;
+        
+        renderGeneralChat();
+    };
+
     window.postComment = async function(id) {
         let nameEl = document.getElementById(`name-${id}`);
         let msgEl = document.getElementById(`msg-${id}`);
@@ -323,24 +391,23 @@
             return;
         }
         
-        // Temporarily disable the button to show it's updating live
         postBtn.innerText = "⏳...";
         postBtn.disabled = true;
         
+        let timeString = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         let match = fixtures.find(f => f.id === id);
-        match.comments.push({ user: userName, text: userMsg });
+        match.comments.push({ user: userName, text: userMsg, time: timeString });
         
-        // Push background data directly to JSONbin 
         await saveToCloud(true);
-        
-        // Re-render to clear fields and present updated array cleanly
         renderFixtures();
     };
 
     window.resetAllData = function() {
-        if (confirm("⚠️ Clear all database values, comments, and reset the season schedule?")) {
+        if (confirm("⚠️ Clear all database values, chats, comments, and reset the season schedule?")) {
             generateFixtures();
+            generalChat = [];
             recalculateLeague();
+            renderGeneralChat();
             renderFixtures();
             saveToCloud();
         }
