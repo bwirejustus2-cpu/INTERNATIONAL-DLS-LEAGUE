@@ -6,12 +6,15 @@
     <title>DLS Tournament Hub</title>
     <style>
         :root {
-            --bg-color: #121212;
-            --panel-bg: #1e1e1e;
+            --bg-color: #0b111e;
+            --panel-bg: #131c2e;
+            --panel-sub: #1b263b;
             --accent-color: #00ff66;
+            --accent-hover: #00cc52;
             --text-color: #ffffff;
-            --text-muted: #aaaaaa;
-            --border-color: #333333;
+            --text-muted: #8da2fb;
+            --border-color: #24344f;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
         }
 
         body {
@@ -20,6 +23,8 @@
             color: var(--text-color);
             margin: 0;
             padding: 20px;
+            background-image: radial-gradient(circle at top right, #1a2942 0%, var(--bg-color) 60%);
+            background-attachment: fixed;
         }
 
         .container {
@@ -30,21 +35,31 @@
         header {
             text-align: center;
             margin-bottom: 30px;
+            padding: 20px 0;
         }
 
-        h1 { margin-bottom: 5px; }
+        h1 { 
+            margin-bottom: 5px; 
+            font-size: 2.5rem;
+            text-shadow: 0 2px 10px rgba(0, 255, 102, 0.2);
+            letter-spacing: 1px;
+        }
 
         .status-bar {
             font-size: 14px;
             color: var(--accent-color);
             font-weight: bold;
-            margin-bottom: 20px;
+            background: rgba(0, 255, 102, 0.1);
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 255, 102, 0.2);
         }
 
         .grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 20px;
+            gap: 25px;
         }
 
         @media (max-width: 768px) {
@@ -54,33 +69,45 @@
         .card {
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 25px;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(10px);
         }
 
         /* Tabs Navigation */
         .tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
+            gap: 8px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 5px;
+            overflow-x: auto;
         }
 
         .tab-btn {
             background: none;
             border: none;
             color: var(--text-muted);
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             cursor: pointer;
-            padding: 5px 10px;
+            padding: 10px 16px;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: #white;
+            background: rgba(255,255,255,0.05);
         }
 
         .tab-btn.active {
             color: var(--accent-color);
-            border-bottom: 2px solid var(--accent-color);
+            background: rgba(0, 255, 102, 0.05);
+            border-bottom: 3px solid var(--accent-color);
         }
 
         .tab-content { display: none; }
@@ -89,115 +116,164 @@
         /* Tables */
         table {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
         }
 
         th, td {
-            padding: 10px;
+            padding: 14px;
             text-align: left;
-            border-bottom: 1px solid var(--border-color);
         }
 
-        th { color: var(--text-muted); }
+        th { 
+            color: var(--text-muted); 
+            background-color: var(--panel-sub);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
 
         /* Chat System */
         .chat-box {
-            height: 300px;
+            height: 350px;
             overflow-y: auto;
             border: 1px solid var(--border-color);
-            padding: 10px;
-            border-radius: 6px;
-            background: #151515;
-            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            margin-bottom: 15px;
         }
 
         .chat-msg {
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px dashed #222;
+            margin-bottom: 14px;
+            padding: 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255,255,255,0.02);
         }
 
         .chat-header {
             font-size: 12px;
             color: var(--text-muted);
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
         }
 
         .chat-username {
             font-weight: bold;
-            color: #3399ff;
+            color: #4facfe;
         }
 
         .chat-actions a {
             color: var(--accent-color);
             font-size: 11px;
-            margin-left: 10px;
+            margin-left: 12px;
             text-decoration: none;
             cursor: pointer;
+            opacity: 0.8;
         }
+        .chat-actions a:hover { opacity: 1; }
 
         .reply-box {
-            margin-left: 20px;
-            border-left: 2px solid var(--border-color);
-            padding-left: 10px;
-            margin-top: 5px;
-            background: #1c1c1c;
+            margin-left: 25px;
+            border-left: 3px solid #4facfe;
+            background: rgba(79, 172, 254, 0.05);
         }
 
-        /* 1X2 Prediction Buttons */
+        /* 1X2 Prediction Slips */
         .prediction-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px;
-            border-bottom: 1px solid var(--border-color);
+            padding: 16px;
+            background: var(--panel-sub);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 10px;
         }
 
         .btn-group {
             display: flex;
-            gap: 5px;
+            gap: 8px;
         }
 
         .predict-btn {
-            background-color: #2a2a2a;
+            background-color: var(--bg-color);
             border: 1px solid var(--border-color);
             color: white;
-            padding: 8px 16px;
-            font-weight: bold;
-            border-radius: 4px;
+            padding: 10px 20px;
+            font-weight: 800;
+            border-radius: 6px;
             cursor: pointer;
-            min-width: 50px;
+            min-width: 55px;
+            transition: all 0.2s ease;
+        }
+
+        .predict-btn:hover:not(:disabled) {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
         }
 
         .predict-btn.selected {
             background-color: var(--accent-color);
-            color: black;
+            color: #000000;
             border-color: var(--accent-color);
+            box-shadow: 0 0 10px rgba(0, 255, 102, 0.4);
         }
 
         .predict-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
         }
 
-        /* Forms & Inputs */
-        input, button, textarea {
-            background-color: #252525;
+        /* Forms & Inputs Styling */
+        input[type="text"], input[type="password"], textarea {
+            background-color: var(--bg-color);
             border: 1px solid var(--border-color);
             color: white;
-            padding: 8px;
-            border-radius: 4px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
         }
 
         button {
             cursor: pointer;
             font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 6px;
+            border: none;
+            transition: all 0.2s ease;
         }
 
         .btn-success {
             background-color: var(--accent-color);
-            color: black;
+            color: #000000;
+        }
+
+        .btn-success:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
         }
 
         .hidden { display: none !important; }
@@ -213,31 +289,38 @@
         </div>
     </header>
 
-    <!-- AUTHENTICATION / ACCOUNT SYSTEM -->
+    <!-- AUTHENTICATION BOARD -->
     <div class="card" id="auth-panel">
         <div id="register-view">
-            <h3>Manager Registration</h3>
-            <p style="font-size: 13px; color: var(--text-muted);">Pick a unique name. Native phone keyboard emojis/stickers are fully supported!</p>
-            <input type="text" id="reg-username" placeholder="Enter unique username...">
-            <button class="btn-success" onclick="registerUser()">Register</button>
-            <p style="font-size: 12px; margin-top: 10px;">
-                <a href="#" style="color: var(--accent-color);" onclick="toggleAuthViews(true)">Accidentally cleared cache? Recover account</a>
+            <h3 style="margin-top:0;">Manager Registration</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Choose a completely unique manager username to participate.</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <input type="text" id="reg-username" placeholder="Enter unique username..." style="flex-grow: 1;">
+                <button class="btn-success" onclick="registerUser()">Register Account</button>
+            </div>
+            <p style="font-size: 12px; margin-top: 12px; margin-bottom:0;">
+                <a href="#" style="color: var(--accent-color); text-decoration: none;" onclick="toggleAuthViews(true)">Accidentally cleared cache? Recover account here →</a>
             </p>
         </div>
+        
         <div id="recover-view" class="hidden">
-            <h3>Recover Account</h3>
-            <input type="text" id="rec-username" placeholder="Username...">
-            <input type="text" id="rec-pin" placeholder="4-Digit Secret Pin...">
+            <h3 style="margin-top:0;">Recover Account</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                <input type="text" id="rec-username" placeholder="Username...">
+                <input type="text" id="rec-pin" placeholder="4-Digit Secret Pin...">
+            </div>
             <button class="btn-success" onclick="recoverAccount()">Login</button>
-            <button onclick="toggleAuthViews(false)">Back</button>
+            <button style="background:transparent; color:white; border: 1px solid var(--border-color);" onclick="toggleAuthViews(false)">Back</button>
         </div>
+
         <div id="welcome-view" class="hidden">
-            <h3>Welcome back, <span id="active-user" style="color: var(--accent-color)"></span>!</h3>
-            <p id="user-pin-display" style="font-size: 13px; color: var(--text-muted);"></p>
-            <button onclick="logout()">Log Out / Switch User</button>
+            <h3 style="margin-top:0;">Welcome back, <span id="active-user" style="color: var(--accent-color)"></span>!</h3>
+            <p id="user-pin-display" style="font-size: 13px; color: var(--text-muted); margin-bottom:15px;"></p>
+            <button style="background: rgba(255,59,59,0.1); color: #ff3b3b; border: 1px solid rgba(255,59,59,0.2);" onclick="logout()">Log Out / Switch Account</button>
         </div>
     </div>
 
+    <!-- TABS MENU -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('fixtures-tab')">📅 Match Predictions (1X2)</button>
         <button class="tab-btn" onclick="switchTab('standings-tab')">📊 Leaderboards</button>
@@ -247,18 +330,18 @@
 
     <div class="grid">
         
-        <!-- LEFT PANELS -->
+        <!-- MAIN MODULES -->
         <div class="main-content">
-            <!-- PREDICTIONS ENGINE -->
+            <!-- PREDICTIONS PANEL -->
             <div id="fixtures-tab" class="tab-content active card">
                 <h2>1X2 Full Time Predictions</h2>
-                <p style="font-size:13px; color: var(--text-muted);">Predict Home Win (1), Draw (X), or Away Win (2). Correct picks earn 5 points!</p>
+                <p style="font-size:13px; color: var(--text-muted); margin-bottom: 20px;">Predict Home Win (1), Draw (X), or Away Win (2). Correct choices award 5 points automatically.</p>
                 <div id="fixtures-list"></div>
             </div>
 
-            <!-- LEADERBOARDS -->
+            <!-- STANDINGS & LEADERBOARD -->
             <div id="standings-tab" class="tab-content card">
-                <h2>Tournament Standings</h2>
+                <h2>League Table</h2>
                 <table id="league-table">
                     <thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>PTS</th></tr></thead>
                     <tbody></tbody>
@@ -266,60 +349,60 @@
 
                 <h2 style="margin-top: 40px;">👑 Predictor King Leaderboard</h2>
                 <table id="predictor-table">
-                    <thead><tr><th>Manager</th><th>Correct Predictions</th><th>Total Points</th></tr></thead>
+                    <thead><tr><th>Manager</th><th>Correct Picks</th><th>Total Points</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
 
-            <!-- CHAT SYSTEM -->
+            <!-- FAN ZONE CHAT MODULE -->
             <div id="chat-tab" class="tab-content card">
                 <h2>Fan Zone Chat</h2>
                 <div class="chat-box" id="chat-box"></div>
                 <div id="reply-indicator" style="font-size: 12px; margin-bottom: 5px; color: var(--accent-color);" class="hidden">
-                    Replying to a post... <a href="#" style="color: red; margin-left:10px;" onclick="cancelReply()">Cancel</a>
+                    Replying to comment... <a href="#" style="color: #ff3b3b; margin-left:10px; text-decoration:none;" onclick="cancelReply()">Cancel</a>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <textarea id="chat-input" style="flex-grow: 1; resize: none;" placeholder="Type your commentary or use keyboard stickers/emojis..."></textarea>
+                    <textarea id="chat-input" style="flex-grow: 1; resize: none; height: 20px;" placeholder="Type a message or use keyboard emojis/stickers..."></textarea>
                     <button class="btn-success" onclick="sendChat()">Post</button>
                 </div>
             </div>
 
-            <!-- ADMIN SYSTEM PANEL -->
+            <!-- BACKEND CONTROL INTERFACE -->
             <div id="admin-tab" class="tab-content card">
-                <h2>Admin Authentication</h2>
+                <h2>Admin Panel Authentication</h2>
                 <div id="admin-login-box">
-                    <input type="password" id="admin-pass" placeholder="Enter Admin Password...">
+                    <input type="password" id="admin-pass" placeholder="Enter Admin Password..." style="margin-right: 10px;">
                     <button class="btn-success" onclick="verifyAdmin()">Login</button>
                 </div>
                 
                 <div id="admin-controls" class="hidden">
-                    <div style="background: #252525; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
-                        <h4 style="margin: 0 0 5px 0;">Traffic Statistics</h4>
-                        <span id="admin-visits">📊 0 visits</span>
+                    <div style="background: var(--panel-sub); padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid var(--border-color)">
+                        <h4 style="margin: 0 0 5px 0; color: var(--text-muted);">Traffic Monitor</h4>
+                        <span id="admin-visits" style="font-weight:bold; font-size:16px;">📊 0 visits</span>
                     </div>
 
-                    <h3>Manage Scores & Results</h3>
+                    <h3>Score Settlement Center</h3>
                     <div id="admin-fixtures-list"></div>
 
-                    <h3 style="margin-top: 30px;">🔐 Backup Player Directory</h3>
+                    <h3 style="margin-top: 45px;">🔐 Backup Player Directory (Pins)</h3>
                     <table id="admin-user-table">
-                        <thead><tr><th>Manager</th><th>Secret Pin</th><th>Session</th></tr></thead>
+                        <thead><tr><th>Manager</th><th>Secret Pin</th><th>Session Action</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- RIGHT SIDE PANEL -->
+        <!-- RIGHT SIDEBAR INFO -->
         <div class="sidebar">
             <div class="card">
-                <h3>Prediction Rules</h3>
-                <ul style="padding-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.6;">
-                    <li><b>1</b> = Home Team Win</li>
-                    <li><b>X</b> = Draw Match</li>
-                    <li><b>2</b> = Away Team Win</li>
-                    <li>Picks lock automatically once admin enters the score.</li>
-                    <li>Each accurate prediction awards exactly <b>5 points</b>.</li>
+                <h3 style="margin-top:0; color: var(--accent-color);">How to Play</h3>
+                <ul style="padding-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.8; margin-bottom:0;">
+                    <li>Select <b>1</b> for a Home Team win.</li>
+                    <li>Select <b>X</b> to predict a Draw game.</li>
+                    <li>Select <b>2</b> for an Away Team win.</li>
+                    <li>All choices lock instantly when match score is closed.</li>
+                    <li>Earn <b>+5 points</b> for every correct slip.</li>
                 </ul>
             </div>
         </div>
@@ -327,12 +410,11 @@
 </div>
 
 <script>
-    // --- DATABASE CONFIGURATION ---
+    // --- SERVER CONNECTORS ---
     const BIN_ID = '6a632995da38895dfe88fbfc'; 
     const SECRET_KEY = '$2a$10$LnRR7.WaC/FO4X0yPuJ0XedNXXhZ/Y2nb8erhagnR3NQCTjIskqya'; 
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-    // --- LIVE MEMORY BUFFER ---
     let dbState = {
         users: {},         
         fixtures: [],      
@@ -346,12 +428,11 @@
     let isAdmin = false;
     let replyTargetId = null;
 
-    // --- ENGINE INITIALIZATION ---
     window.onload = function() {
         checkLocalSession();
         fetchData(true); 
         
-        // Background silent execution data refresh loop every 5000 milliseconds (5s)
+        // 5s background data stream sync loop
         setInterval(() => {
             fetchData(false);
         }, 5000);
@@ -366,7 +447,6 @@
         }
     }
 
-    // --- NETWORK DATA INTERCHANGE LABELS ---
     async function fetchData(isInitial) {
         try {
             let headers = { "X-Master-Key": SECRET_KEY };
@@ -377,41 +457,44 @@
             
             dbState = data.record ? data.record : data;
 
-            // Integrity Fix: Ensure structural consistency across arrays
             if(!dbState.users) dbState.users = {};
             if(!dbState.fixtures) dbState.fixtures = [];
             if(!dbState.chat) dbState.chat = [];
             if(!dbState.standings) dbState.standings = [];
 
-            let structuralUpdateRequired = false;
+            let updateNeeded = false;
 
-            // Safe Migration: Inject recovery pins onto legacy usernames automatically
+            // Integrity Sync: Ensure all managers have active configurations safely
             for (let name in dbState.users) {
+                // Completely strip out any accidentally assigned legacy team parameters during migration
+                if(dbState.users[name].team) {
+                    delete dbState.users[name].team;
+                    updateNeeded = true;
+                }
                 if (!dbState.users[name].pin) {
                     dbState.users[name].pin = Math.floor(1000 + Math.random() * 9000).toString();
-                    structuralUpdateRequired = true;
+                    updateNeeded = true;
                 }
                 if (!dbState.users[name].predictions) {
                     dbState.users[name].predictions = {};
-                    structuralUpdateRequired = true;
+                    updateNeeded = true;
                 }
             }
 
             if (isInitial) {
                 dbState.visits = (dbState.visits || 0) + 1;
-                structuralUpdateRequired = true;
+                updateNeeded = true;
             }
 
-            // Simulate participant tracking safely without storage leakages
             dbState.activeConnections = Math.max(1, Math.floor(Math.random() * 3) + 2);
 
-            if (structuralUpdateRequired) {
+            if (updateNeeded) {
                 pushData();
             } else {
                 renderUI();
             }
         } catch (error) {
-            console.error("Database sync delay:", error);
+            console.error("Sync stream throttling:", error);
         }
     }
 
@@ -427,17 +510,16 @@
             });
             renderUI();
         } catch (error) {
-            console.error("Database commit error:", error);
+            console.error("Data tracking drop:", error);
         }
     }
 
-    // --- RENDER ROUTINES ---
     function renderUI() {
         document.getElementById('online-counter').innerText = `🟢 ${dbState.activeConnections || 1} participants online`;
         document.getElementById('admin-visits').innerText = `📊 ${dbState.visits || 0} visits`;
 
         if(currentUser && dbState.users[currentUser]) {
-            document.getElementById('user-pin-display').innerHTML = `Your Secret Recovery Code: <b>${dbState.users[currentUser].pin}</b> <br><small style='color:orange;'>Save this! Used to log back in if your browser cache deletes.</small>`;
+            document.getElementById('user-pin-display').innerHTML = `Your Account Recovery Pin: <b style="color:var(--accent-color); font-size:16px;">${dbState.users[currentUser].pin}</b> <br><small style='color:var(--text-muted); font-size:11px;'>Write this down! Enter this code if you clear your phone's browser cache.</small>`;
         }
 
         renderFixtures();
@@ -463,10 +545,10 @@
         }
     }
 
-    // --- IDENTITY CONTROL CORE ---
+    // --- USER REGISTRATION BOX (NO TEAMS DISPLAYED OR STORED) ---
     function registerUser() {
         let username = document.getElementById('reg-username').value.trim();
-        if(!username) return alert("Enter a valid name!");
+        if(!username) return alert("Enter a valid username!");
         
         if(dbState.users[username]) {
             return alert("Username already exists! Please choose a unique manager name.");
@@ -493,7 +575,7 @@
         let pin = document.getElementById('rec-pin').value.trim();
 
         if(!dbState.users[username] || dbState.users[username].pin !== pin) {
-            return alert("Invalid Username or Security Code Configuration!");
+            return alert("Invalid credentials provided!");
         }
 
         currentUser = username;
@@ -512,13 +594,13 @@
         renderUI();
     }
 
-    // --- 1X2 PREDICTIONS COMPILER ---
+    // --- FIXTURES MATRIX ---
     function renderFixtures() {
         const container = document.getElementById('fixtures-list');
         container.innerHTML = "";
 
         if(dbState.fixtures.length === 0) {
-            container.innerHTML = "<p style='color:var(--text-muted);'>No fixtures listed yet.</p>";
+            container.innerHTML = "<p style='color:var(--text-muted);'>No upcoming matches listed.</p>";
             return;
         }
 
@@ -530,8 +612,8 @@
             row.className = "prediction-row";
             row.innerHTML = `
                 <div>
-                    <b>${fix.home}</b> vs <b>${fix.away}</b>
-                    <br><span style="font-size:12px; color:var(--text-muted);">${isLocked ? `Result: ${fix.score} [Outcome: ${fix.outcome}]` : 'Awaiting Match Play'}</span>
+                    <span style="font-size: 16px; font-weight:bold;">${fix.home} vs ${fix.away}</span>
+                    <br><span style="font-size:12px; color:var(--text-muted); font-weight:500;">${isLocked ? `Result Score: ${fix.score} [Outcome: ${fix.outcome}]` : '⌛ Awaiting Kick-off'}</span>
                 </div>
                 <div class="btn-group">
                     <button class="predict-btn ${userSelection === '1' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '1')">1</button>
@@ -544,7 +626,7 @@
     }
 
     function submitPrediction(fixtureId, selection) {
-        if(!currentUser) return alert("You must register a manager account to submit predictions!");
+        if(!currentUser) return alert("Please create an active manager profile to log predictions!");
         if(!dbState.users[currentUser].predictions) dbState.users[currentUser].predictions = {};
         
         dbState.users[currentUser].predictions[fixtureId] = selection;
@@ -561,7 +643,7 @@
 
         teams.forEach(team => {
             let r = document.createElement('tr');
-            r.innerHTML = `<td><b>${team.name}</b></td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gd}</td><td><b>${team.pts}</b></td>`;
+            r.innerHTML = `<td><b>${team.name}</b></td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gd}</td><td style="color:var(--accent-color)"><b>${team.pts}</b></td>`;
             tbody.appendChild(r);
         });
 
@@ -576,12 +658,12 @@
 
         pUsers.forEach(u => {
             let r = document.createElement('tr');
-            r.innerHTML = `<td>👤 ${u.name}</td><td>${u.correct || 0}</td><td style="color:var(--accent-color); font-weight:bold;">${u.points || 0} pts</td>`;
+            r.innerHTML = `<td>👤 <b>${u.name}</b></td><td>${u.correct || 0}</td><td style="color:var(--accent-color); font-weight:bold;">${u.points || 0} pts</td>`;
             pTbody.appendChild(r);
         });
     }
 
-    // --- FORUM ENGINE WITH REPLIES ---
+    // --- COMMUNITY BOARD ENGINE ---
     function renderChat() {
         const box = document.getElementById('chat-box');
         const scrollAtBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 50;
@@ -609,14 +691,13 @@
 
         div.innerHTML = `
             <div class="chat-header">
-                <span class="chat-username">${msg.user}</span> 
-                <span style="color:#666; margin-left:5px;">• ${msg.time}</span>
+                <div><span class="chat-username">${msg.user}</span><span style="color:var(--text-muted); margin-left:8px;">${msg.time}</span></div>
                 <span class="chat-actions">
                     ${!isReply ? `<a onclick="setReplyTarget(${msg.id})">↩️ Reply</a>` : ''}
-                    ${canEdit ? `<a onclick="editChat(${msg.id})">✏️ Edit</a> <a onclick="boldChat(${msg.id})"><b>B</b></a> <a onclick="deleteChat(${msg.id})" style="color:red;">🗑️ Delete</a>` : ''}
+                    ${canEdit ? `<a onclick="editChat(${msg.id})">✏️ Edit</a> <a onclick="boldChat(${msg.id})"><b>B</b></a> <a onclick="deleteChat(${msg.id})" style="color:#ff3b3b;">🗑️ Delete</a>` : ''}
                 </span>
             </div>
-            <div style="${fontStyle} margin-top:3px; word-break: break-word;">${msg.msg}</div>
+            <div style="${fontStyle} margin-top:3px; word-break: break-word; font-size:14px; line-height:1.4;">${msg.msg}</div>
         `;
         return div;
     }
@@ -632,12 +713,12 @@
     }
 
     function sendChat() {
-        if(!currentUser) return alert("Register an account to comment inside the zone!");
+        if(!currentUser) return alert("Log in to join the forum discussion!");
         let text = document.getElementById('chat-input').value.trim();
         if(!text) return;
 
         let now = new Date();
-        let timestamp = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " " + now.toLocaleDateString([], {month:'short', day:'numeric'});
+        let timestamp = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " | " + now.toLocaleDateString([], {month:'short', day:'numeric'});
 
         let newMsg = {
             id: Date.now(),
@@ -658,7 +739,7 @@
     function editChat(id) {
         let index = dbState.chat.findIndex(c => c.id === id);
         if(index === -1) return;
-        let newText = prompt("Edit your post:", dbState.chat[index].msg);
+        let newText = prompt("Edit text:", dbState.chat[index].msg);
         if(newText !== null) {
             dbState.chat[index].msg = newText;
             pushData();
@@ -673,22 +754,22 @@
     }
 
     function deleteChat(id) {
-        if(confirm("Permanently erase this comment line?")) {
+        if(confirm("Confirm deletion?")) {
             dbState.chat = dbState.chat.filter(c => c.id !== id && c.parentId !== id);
             pushData();
         }
     }
 
-    // --- LEAGUE ADMINISTRATIVE LAUNCHERS ---
+    // --- LEAGUE ADMINISTRATIVE CONTROLS ---
     function verifyAdmin() {
         let password = document.getElementById('admin-pass').value;
-        if(password === "admin123") { // Change this to your preferred admin password
+        if(password === "admin123") { 
             isAdmin = true;
             document.getElementById('admin-login-box').classList.add('hidden');
             document.getElementById('admin-controls').classList.remove('hidden');
             renderUI();
         } else {
-            alert("Incorrect Authorization Pin!");
+            alert("Wrong credentials entry!");
         }
     }
 
@@ -700,12 +781,16 @@
 
         dbState.fixtures.forEach(fix => {
             let div = document.createElement('div');
-            div.style.padding = "10px";
-            div.style.borderBottom = "1px solid #444";
+            div.style.padding = "12px 0";
+            div.style.borderBottom = "1px solid var(--border-color)";
             div.innerHTML = `
-                <span>${fix.home} vs ${fix.away}</span>
-                <input type="text" id="score-${fix.id}" placeholder="e.g. 2-1" style="width:60px; margin-left:10px;" value="${fix.score || ''}">
-                <button onclick="settleMatch(${fix.id})" ${fix.locked ? 'style="opacity:0.6"' : ''}>Set Result & Lock Picks</button>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span><b>${fix.home} vs ${fix.away}</b></span>
+                    <div>
+                        <input type="text" id="score-${fix.id}" placeholder="e.g. 2-1" style="width:70px; padding:6px; text-align:center;" value="${fix.score || ''}">
+                        <button class="btn-success" style="padding: 6px 12px; font-size:12px;" onclick="settleMatch(${fix.id})" ${fix.locked ? 'style="opacity:0.5;"' : ''}>Lock Score</button>
+                    </div>
+                </div>
             `;
             container.appendChild(div);
         });
@@ -714,14 +799,14 @@
         tbody.innerHTML = "";
         for(let name in dbState.users) {
             let tr = document.createElement('tr');
-            tr.innerHTML = `<td><b>${name}</b></td><td style="color:var(--accent-color)"><b>${dbState.users[name].pin}</b></td><td><button onclick="adminResetSession('${name}')">Wipe Device Log</button></td>`;
+            tr.innerHTML = `<td>👤 <b>${name}</b></td><td style="color:var(--accent-color)"><b>${dbState.users[name].pin}</b></td><td><button style="background:rgba(255,255,255,0.05); color:white; border: 1px solid var(--border-color); padding: 5px 10px; font-size:12px;" onclick="adminResetSession('${name}')">Reset Lock</button></td>`;
             tbody.appendChild(tr);
         }
     }
 
     function settleMatch(fixtureId) {
         let scoreVal = document.getElementById(`score-${fixtureId}`).value.trim();
-        if(!scoreVal.includes('-')) return alert("Enter result using a dash formatting token (e.g., 2-1)!");
+        if(!scoreVal.includes('-')) return alert("Use format splitting (e.g. 2-1)!");
 
         let parts = scoreVal.split('-');
         let homeG = parseInt(parts[0]);
@@ -736,7 +821,6 @@
         dbState.fixtures[fixIndex].outcome = computedOutcome;
         dbState.fixtures[fixIndex].locked = true;
 
-        // Score settlement evaluation algorithm (+5 Points allocation)
         for(let name in dbState.users) {
             let userPick = dbState.users[name].predictions ? dbState.users[name].predictions[fixtureId] : null;
             if(userPick === computedOutcome) {
@@ -749,7 +833,7 @@
     }
 
     function adminResetSession(username) {
-        if(confirm(`Wipe device log signature session token data linked to ${username}? Points remain intact.`)) {
+        if(confirm(`Wipe device lock signature linked to ${username}?`)) {
             if(currentUser === username) logout();
             pushData();
         }
