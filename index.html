@@ -328,7 +328,7 @@
     </div>
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('fixtures-tab')">📅 Match Predictions (1X2)</button>
+        <button class="tab-btn active" onclick="switchTab('fixtures-tab')">📅 FIXTURES AND PREDICTIONS</button>
         <button class="tab-btn" onclick="switchTab('standings-tab')">📊 Leaderboards</button>
         <button class="tab-btn" onclick="switchTab('chat-tab')">💬 Fan Zone Chat</button>
         <button class="tab-btn" onclick="switchTab('admin-tab')">⚙️ Admin Control</button>
@@ -368,13 +368,14 @@
             </div>
 
             <div id="admin-tab" class="tab-content card">
-                <h2>Admin Panel Authentication</h2>
                 <div id="admin-login-box">
+                    <h2>Admin Panel Authentication</h2>
                     <input type="password" id="admin-pass" placeholder="Enter Admin Password..." style="margin-right: 10px;">
                     <button class="btn-success" style="background: var(--accent-blue);" onclick="verifyAdmin()">Login</button>
                 </div>
                 
                 <div id="admin-controls" class="hidden">
+                    <h2>Admin Control Dashboard</h2>
                     <div style="background: var(--panel-sub); padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid var(--border-color)">
                         <h4 style="margin: 0 0 5px 0; color: var(--text-muted);">Traffic Monitor</h4>
                         <span id="admin-visits" style="font-weight:bold; font-size:16px;">📊 0 visits</span>
@@ -498,7 +499,7 @@
                 renderUI();
             }
         } catch (error) {
-            console.error("Tracking systems functional...");
+            console.error("Connection live...");
         }
     }
 
@@ -519,7 +520,6 @@
     }
 
     function renderUI() {
-        // COUNT ACTIVE REGISTERED MANAGERS DYNAMICALLY FROM DATABASE
         let actualRegisteredCount = Object.keys(dbState.users || {}).length;
         document.getElementById('online-counter').innerText = `🟢 ${actualRegisteredCount} participant${actualRegisteredCount !== 1 ? 's' : ''} online`;
         document.getElementById('admin-visits').innerText = `📊 ${dbState.visits || 0} visits`;
@@ -748,11 +748,19 @@
         }
     }
 
+    function forceClearSession(username) {
+        if(confirm(`Force drop the local session for ${username}?`)) {
+            delete dbState.users[username];
+            pushData();
+        }
+    }
+
     function renderAdminPanel() {
         if(!isAdmin) return;
+        
+        // 1. Render Score settlement fields
         const container = document.getElementById('admin-fixtures-list');
         container.innerHTML = "";
-
         dbState.fixtures.forEach(fix => {
             let div = document.createElement('div');
             div.style.padding = "12px 0";
@@ -767,6 +775,27 @@
             `;
             container.appendChild(div);
         });
+
+        // 2. POPULATE THE BACKUP PLAYER DIRECTORY ROWS
+        const userTbody = document.querySelector('#admin-user-table tbody');
+        userTbody.innerHTML = "";
+        
+        let initialKeys = Object.keys(dbState.users || {});
+        if(initialKeys.length === 0) {
+            userTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 15px; color: var(--text-muted)">No registered users found.</td></tr>`;
+        } else {
+            initialKeys.forEach(name => {
+                let uData = dbState.users[name];
+                let row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><b>${name}</b></td>
+                    <td>${uData.teamName || 'N/A'}</td>
+                    <td><code style="font-size:15px; background:#f1f5f9; padding:4px 8px; border-radius:4px; font-weight:bold; color:var(--accent-orange);">${uData.pin || '----'}</code></td>
+                    <td><button style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); padding:5px 10px; font-size:12px;" onclick="forceClearSession('${name}')">Wipe User</button></td>
+                `;
+                userTbody.appendChild(row);
+            });
+        }
     }
 
     function settleMatch(fixtureId) {
