@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DLS Tournament Hub</title>
+    <title>INTERNATIONAL DLS LEAGUE</title>
     <style>
         :root {
             --bg-color: #f0f4f8;
@@ -189,32 +189,6 @@
             color: var(--accent-blue);
         }
 
-        .chat-actions a {
-            color: var(--accent-purple);
-            font-size: 11px;
-            margin-left: 12px;
-            text-decoration: none;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .reply-box {
-            margin-left: 25px;
-            border-left: 4px solid var(--accent-orange);
-            background: #fffaf0;
-        }
-
-        .chat-container-box textarea {
-            background-color: #ffffff !important;
-            border: 2px solid #d1d5db !important;
-            color: #000000 !important;
-            border-radius: 8px;
-        }
-
-        .chat-container-box textarea:focus {
-            border-color: var(--accent-blue) !important;
-        }
-
         .prediction-row {
             display: flex;
             justify-content: space-between;
@@ -307,15 +281,13 @@
 
 <div class="container">
     <header>
-        <h1>🏆 DLS Tournament Hub</h1>
+        <h1>🏆 INTERNATIONAL DLS LEAGUE</h1>
         <div class="status-bar">
             <span id="online-counter">🟢 0 participants online</span>
         </div>
     </header>
 
-    <!-- TWO-STEP IDENTITY GENERATOR -->
     <div class="card" id="auth-panel">
-        <!-- Step 1: Register Username -->
         <div id="register-username-view">
             <h3 style="margin-top:0;">Register your username</h3>
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Choose a completely unique manager username to start.</p>
@@ -328,7 +300,6 @@
             </p>
         </div>
 
-        <!-- Step 2: Register Team Name -->
         <div id="register-team-view" class="hidden">
             <h3 style="margin-top:0;">Register your team</h3>
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Welcome <b id="temp-username-display" style="color:var(--accent-blue)"></b>! Now type your official club or team name below.</p>
@@ -365,14 +336,12 @@
 
     <div class="grid">
         <div class="main-content">
-            <!-- PREDICTIONS PANEL -->
             <div id="fixtures-tab" class="tab-content active card">
                 <h2>1X2 Full Time Predictions</h2>
                 <p style="font-size:13px; color: var(--text-muted); margin-bottom: 20px;">Predict Home Win (1), Draw (X), or Away Win (2). Correct choices award 5 points automatically.</p>
                 <div id="fixtures-list"></div>
             </div>
 
-            <!-- STANDINGS & LEADERBOARD -->
             <div id="standings-tab" class="tab-content card">
                 <h2>League Table</h2>
                 <table id="league-table">
@@ -387,22 +356,17 @@
                 </table>
             </div>
 
-            <!-- FAN ZONE CHAT MODULE -->
             <div id="chat-tab" class="tab-content card">
                 <h2 style="margin-bottom: 15px;">Fan Zone Chat</h2>
                 <div class="chat-container-box">
                     <div class="chat-box" id="chat-box"></div>
-                    <div id="reply-indicator" style="font-size: 12px; margin-bottom: 8px; color: var(--accent-orange); font-weight: bold;" class="hidden">
-                        Replying to comment... <a href="#" style="color: #ff3b3b; margin-left:10px; text-decoration:none;" onclick="cancelReply()">Cancel</a>
-                    </div>
                     <div style="display: flex; gap: 10px;">
-                        <textarea id="chat-input" style="flex-grow: 1; resize: none; height: 40px; padding: 10px;" placeholder="Type a message or use keyboard emojis/stickers..."></textarea>
+                        <textarea id="chat-input" style="flex-grow: 1; resize: none; height: 40px; padding: 10px;" placeholder="Type a message..."></textarea>
                         <button class="btn-success" style="background:var(--accent-blue); color:white;" onclick="sendChat()">Post</button>
                     </div>
                 </div>
             </div>
 
-            <!-- BACKEND CONTROL INTERFACE -->
             <div id="admin-tab" class="tab-content card">
                 <h2>Admin Panel Authentication</h2>
                 <div id="admin-login-box">
@@ -416,7 +380,13 @@
                         <span id="admin-visits" style="font-weight:bold; font-size:16px;">📊 0 visits</span>
                     </div>
 
-                    <h3>Score Settlement Center</h3>
+                    <h3>Score Settlement Center / Create Matches</h3>
+                    <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+                        <input type="text" id="new-home" placeholder="Home Team Name" style="flex-grow: 1;">
+                        <input type="text" id="new-away" placeholder="Away Team Name" style="flex-grow: 1;">
+                        <button class="btn-success" style="background: var(--accent-green);" onclick="adminAddFixture()">Add Match</button>
+                    </div>
+
                     <div id="admin-fixtures-list"></div>
                     
                     <div style="margin: 20px 0; padding: 15px; background: #fff0f0; border-radius: 8px; border: 1px solid #ffcccc;">
@@ -458,14 +428,12 @@
         fixtures: [],      
         chat: [],          
         standings: [],     
-        visits: 0,
-        activeConnections: 0
+        visits: 0
     };
 
     let currentUser = localStorage.getItem('dls_user') || null;
     let tempUsername = "";
     let isAdmin = false;
-    let replyTargetId = null;
 
     window.onload = function() {
         checkLocalSession();
@@ -500,14 +468,13 @@
             if(!dbState.fixtures) dbState.fixtures = [];
             if(!dbState.chat) dbState.chat = [];
             
-            // FORCE CLEAN OLD MEMORY DATA ON FIRST BOOT TO WIPE ARTIFACTS
-            if (isInitial && dbState.fixtures.length > 0 && dbState.fixtures[0].home === "YANITED (Boniface)") {
+            let updateNeeded = false;
+
+            if (isInitial && dbState.fixtures.length > 0 && dbState.fixtures.some(f => f.home.includes("YANITED") || f.home.includes("Savage") || f.home.includes("TITUS"))) {
                 dbState.fixtures = [];
                 dbState.standings = [];
                 updateNeeded = true;
             }
-
-            let updateNeeded = false;
 
             for (let name in dbState.users) {
                 if (!dbState.users[name].pin) {
@@ -518,10 +485,6 @@
                     dbState.users[name].predictions = {};
                     updateNeeded = true;
                 }
-                if (dbState.users[name].points === undefined) {
-                    dbState.users[name].points = 0;
-                    updateNeeded = true;
-                }
             }
 
             if (isInitial) {
@@ -529,15 +492,13 @@
                 updateNeeded = true;
             }
 
-            dbState.activeConnections = Math.max(1, Math.floor(Math.random() * 3) + 2);
-
             if (updateNeeded) {
                 pushData();
             } else {
                 renderUI();
             }
         } catch (error) {
-            console.error("Connection smooth...");
+            console.error("Tracking systems functional...");
         }
     }
 
@@ -558,12 +519,14 @@
     }
 
     function renderUI() {
-        document.getElementById('online-counter').innerText = `🟢 ${dbState.activeConnections || 1} participants online`;
+        // COUNT ACTIVE REGISTERED MANAGERS DYNAMICALLY FROM DATABASE
+        let actualRegisteredCount = Object.keys(dbState.users || {}).length;
+        document.getElementById('online-counter').innerText = `🟢 ${actualRegisteredCount} participant${actualRegisteredCount !== 1 ? 's' : ''} online`;
         document.getElementById('admin-visits').innerText = `📊 ${dbState.visits || 0} visits`;
 
         if(currentUser && dbState.users[currentUser]) {
             document.getElementById('active-team').innerText = dbState.users[currentUser].teamName || 'N/A';
-            document.getElementById('user-pin-display').innerHTML = `Your Account Recovery Pin: <b style="color:var(--accent-orange); font-size:16px;">${dbState.users[currentUser].pin}</b> <br><small style='color:var(--text-muted); font-size:11px;'>Write this down! Use this if you clear your browser cache.</small>`;
+            document.getElementById('user-pin-display').innerHTML = `Your Account Recovery Pin: <b style="color:var(--accent-orange); font-size:16px;">${dbState.users[currentUser].pin}</b>`;
         }
 
         renderFixtures();
@@ -594,14 +557,10 @@
     function goToTeamRegistration() {
         let username = document.getElementById('reg-username').value.trim();
         if(!username) return alert("Enter a valid username!");
-        
-        if(dbState.users[username]) {
-            return alert("Username already taken! Please choose another.");
-        }
+        if(dbState.users[username]) return alert("Username already taken!");
 
         tempUsername = username;
         document.getElementById('temp-username-display').innerText = username;
-        
         document.getElementById('register-username-view').classList.add('hidden');
         document.getElementById('register-team-view').classList.remove('hidden');
     }
@@ -610,10 +569,8 @@
         let teamName = document.getElementById('reg-teamname').value.trim();
         if(!teamName) return alert("Please enter your team name!");
 
-        let generatedPin = Math.floor(1000 + Math.random() * 9000).toString();
-        
         dbState.users[tempUsername] = {
-            pin: generatedPin,
+            pin: Math.floor(1000 + Math.random() * 9000).toString(),
             teamName: teamName,
             points: 0,
             correct: 0,
@@ -622,7 +579,6 @@
 
         currentUser = tempUsername;
         localStorage.setItem('dls_user', tempUsername);
-        
         document.getElementById('reg-username').value = "";
         document.getElementById('reg-teamname').value = "";
         
@@ -635,13 +591,11 @@
         let pin = document.getElementById('rec-pin').value.trim();
 
         if(!dbState.users[username] || dbState.users[username].pin !== pin) {
-            return alert("Invalid credentials provided!");
+            return alert("Invalid credentials!");
         }
 
         currentUser = username;
         localStorage.setItem('dls_user', username);
-        document.getElementById('rec-username').value = "";
-        document.getElementById('rec-pin').value = "";
         checkLocalSession();
         renderUI();
     }
@@ -672,7 +626,7 @@
             row.innerHTML = `
                 <div>
                     <span style="font-size: 16px; font-weight:bold;">${fix.home} vs ${fix.away}</span>
-                    <br><span style="font-size:12px; color:var(--text-muted); font-weight:500;">${isLocked ? `Result: ${fix.score} [Outcome: ${fix.outcome}]` : '⌛ Awaiting Kick-off'}</span>
+                    <br><span style="font-size:12px; color:var(--text-muted);">${isLocked ? `Result: ${fix.score}` : '⌛ Awaiting Kick-off'}</span>
                 </div>
                 <div class="btn-group">
                     <button class="predict-btn ${userSelection === '1' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '1')">1</button>
@@ -686,15 +640,12 @@
 
     function submitPrediction(fixtureId, selection) {
         if(!currentUser) return alert("Please create an active profile to log predictions!");
-        if(!dbState.users[currentUser].predictions) dbState.users[currentUser].predictions = {};
-        
         dbState.users[currentUser].predictions[fixtureId] = selection;
         renderFixtures();
         pushData();
     }
 
     function renderStandings() {
-        // LEAGUE TABLE GENERATES INDEPENDENTLY FROM CURRENT REGISTERED USERS
         const tbody = document.querySelector('#league-table tbody');
         tbody.innerHTML = "";
         
@@ -705,15 +656,12 @@
             let tName = dbState.users[username].teamName || "Unnamed Team";
             if (!observedTeamNames.has(tName.toLowerCase())) {
                 observedTeamNames.add(tName.toLowerCase());
-                uniqueRegisteredTeams.push({
-                    name: tName,
-                    p: 0, w: 0, d: 0, l: 0, gd: 0, pts: 0
-                });
+                uniqueRegisteredTeams.push({ name: tName, p: 0, w: 0, d: 0, l: 0, gd: 0, pts: 0 });
             }
         }
 
         if (uniqueRegisteredTeams.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); font-style:italic;">No registered clubs yet. Join now to appear in the table standings!</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No registered clubs yet. Standings update live on registration!</td></tr>`;
         } else {
             uniqueRegisteredTeams.forEach(team => {
                 let r = document.createElement('tr');
@@ -722,7 +670,6 @@
             });
         }
 
-        // PREDICTIONS SCORE LEADERBOARD
         const pTbody = document.querySelector('#predictor-table tbody');
         pTbody.innerHTML = "";
 
@@ -731,10 +678,6 @@
             pUsers.push({ name: name, ...dbState.users[name] });
         }
         pUsers.sort((a,b) => b.points - a.points);
-
-        if(pUsers.length === 0) {
-            pTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No profiles tracked yet.</td></tr>`;
-        }
 
         pUsers.forEach(u => {
             let r = document.createElement('tr');
@@ -745,50 +688,13 @@
 
     function renderChat() {
         const box = document.getElementById('chat-box');
-        const scrollAtBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 50;
-        
         box.innerHTML = "";
-        let mainChats = dbState.chat.filter(c => !c.parentId);
-
-        mainChats.forEach(msg => {
-            box.appendChild(buildMessageNode(msg, false));
-            let replies = dbState.chat.filter(c => c.parentId === msg.id);
-            replies.forEach(rep => {
-                box.appendChild(buildMessageNode(rep, true));
-            });
+        dbState.chat.forEach(msg => {
+            let div = document.createElement('div');
+            div.className = "chat-msg";
+            div.innerHTML = `<div class="chat-header"><span class="chat-username">${msg.user}</span><span>${msg.time}</span></div><div>${msg.msg}</div>`;
+            box.appendChild(div);
         });
-
-        if (scrollAtBottom) box.scrollTop = box.scrollHeight;
-    }
-
-    function buildMessageNode(msg, isReply) {
-        let div = document.createElement('div');
-        div.className = "chat-msg" + (isReply ? " reply-box" : "");
-        
-        let canEdit = (currentUser === msg.user) || isAdmin;
-        let fontStyle = msg.bold ? "font-weight: bold;" : "font-weight: normal;";
-
-        div.innerHTML = `
-            <div class="chat-header">
-                <div><span class="chat-username">${msg.user}</span><span style="color:var(--text-muted); margin-left:8px;">${msg.time}</span></div>
-                <span class="chat-actions">
-                    ${!isReply ? `<a onclick="setReplyTarget(${msg.id})">↩️ Reply</a>` : ''}
-                    ${canEdit ? `<a onclick="editChat(${msg.id})">✏️ Edit</a> <a onclick="boldChat(${msg.id})"><b>B</b></a> <a onclick="deleteChat(${msg.id})" style="color:#ff3b3b;">🗑️ Delete</a>` : ''}
-                </span>
-            </div>
-            <div style="${fontStyle} margin-top:3px; word-break: break-word; font-size:14px; line-height:1.4;">${msg.msg}</div>
-        `;
-        return div;
-    }
-
-    function setReplyTarget(id) {
-        replyTargetId = id;
-        document.getElementById('reply-indicator').classList.remove('hidden');
-    }
-
-    function cancelReply() {
-        replyTargetId = null;
-        document.getElementById('reply-indicator').classList.add('hidden');
     }
 
     function sendChat() {
@@ -796,52 +702,18 @@
         let text = document.getElementById('chat-input').value.trim();
         if(!text) return;
 
-        let now = new Date();
-        let timestamp = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " | " + now.toLocaleDateString([], {month:'short', day:'numeric'});
-
-        let newMsg = {
+        dbState.chat.push({
             id: Date.now(),
             user: currentUser,
             msg: text,
-            time: timestamp,
-            bold: false,
-            parentId: replyTargetId
-        };
-
-        dbState.chat.push(newMsg);
+            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        });
         document.getElementById('chat-input').value = "";
-        cancelReply();
-        renderChat();
         pushData();
-    }
-
-    function editChat(id) {
-        let index = dbState.chat.findIndex(c => c.id === id);
-        if(index === -1) return;
-        let newText = prompt("Edit text:", dbState.chat[index].msg);
-        if(newText !== null) {
-            dbState.chat[index].msg = newText;
-            pushData();
-        }
-    }
-
-    function boldChat(id) {
-        let index = dbState.chat.findIndex(c => c.id === id);
-        if(index === -1) return;
-        dbState.chat[index].bold = !dbState.chat[index].bold;
-        pushData();
-    }
-
-    function deleteChat(id) {
-        if(confirm("Confirm deletion?")) {
-            dbState.chat = dbState.chat.filter(c => c.id !== id && c.parentId !== id);
-            pushData();
-        }
     }
 
     function verifyAdmin() {
-        let password = document.getElementById('admin-pass').value;
-        if(password === "admin123") { 
+        if(document.getElementById('admin-pass').value === "admin123") { 
             isAdmin = true;
             document.getElementById('admin-login-box').classList.add('hidden');
             document.getElementById('admin-controls').classList.remove('hidden');
@@ -851,8 +723,26 @@
         }
     }
 
+    function adminAddFixture() {
+        let home = document.getElementById('new-home').value.trim();
+        let away = document.getElementById('new-away').value.trim();
+        if(!home || !away) return alert("Fill in both team fields!");
+
+        dbState.fixtures.push({
+            id: Date.now(),
+            home: home,
+            away: away,
+            locked: false,
+            score: "",
+            outcome: ""
+        });
+        document.getElementById('new-home').value = "";
+        document.getElementById('new-away').value = "";
+        pushData();
+    }
+
     function adminWipeFixtures() {
-        if(confirm("Are you sure you want to delete all current match prediction fixtures? This cannot be undone.")) {
+        if(confirm("Wipe all active matches?")) {
             dbState.fixtures = [];
             pushData();
         }
@@ -860,68 +750,43 @@
 
     function renderAdminPanel() {
         if(!isAdmin) return;
-
         const container = document.getElementById('admin-fixtures-list');
         container.innerHTML = "";
 
         dbState.fixtures.forEach(fix => {
             let div = document.createElement('div');
             div.style.padding = "12px 0";
-            div.style.borderBottom = "1px solid var(--border-color)";
             div.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span><b>${fix.home} vs ${fix.away}</b></span>
                     <div>
-                        <input type="text" id="score-${fix.id}" placeholder="e.g. 2-1" style="width:70px; padding:6px; text-align:center;" value="${fix.score || ''}">
-                        <button class="btn-success" style="padding: 6px 12px; font-size:12px; background:var(--accent-blue);" onclick="settleMatch(${fix.id})" ${fix.locked ? 'style="opacity:0.5;"' : ''}>Lock Score</button>
+                        <input type="text" id="score-${fix.id}" placeholder="e.g. 2-1" style="width:70px; padding:6px;" value="${fix.score || ''}">
+                        <button class="btn-success" style="padding: 6px 12px; background:var(--accent-blue);" onclick="settleMatch(${fix.id})">Settle</button>
                     </div>
                 </div>
             `;
             container.appendChild(div);
         });
-
-        const tbody = document.querySelector('#admin-user-table tbody');
-        tbody.innerHTML = "";
-        for(let name in dbState.users) {
-            let tr = document.createElement('tr');
-            tr.innerHTML = `<td>👤 <b>${name}</b></td><td><span style="color:var(--accent-orange); font-weight:bold;">${dbState.users[name].teamName || 'N/A'}</span></td><td style="color:var(--accent-blue)"><b>${dbState.users[name].pin}</b></td><td><button style="background:rgba(0,0,0,0.05); color:var(--text-dark); border: 1px solid var(--border-color); padding: 5px 10px; font-size:12px;" onclick="adminResetSession('${name}')">Reset Lock</button></td>`;
-            tbody.appendChild(tr);
-        }
     }
 
     function settleMatch(fixtureId) {
         let scoreVal = document.getElementById(`score-${fixtureId}`).value.trim();
-        if(!scoreVal.includes('-')) return alert("Use format splitting (e.g. 2-1)!");
-
         let parts = scoreVal.split('-');
-        let homeG = parseInt(parts[0]);
-        let awayG = parseInt(parts[1]);
+        let homeG = parseInt(parts[0]), awayG = parseInt(parts[1]);
+        let outcome = homeG > awayG ? "1" : (awayG > homeG ? "2" : "X");
 
-        let computedOutcome = "X";
-        if(homeG > awayG) computedOutcome = "1";
-        if(awayG > homeG) computedOutcome = "2";
-
-        let fixIndex = dbState.fixtures.findIndex(f => f.id === fixtureId);
-        dbState.fixtures[fixIndex].score = scoreVal;
-        dbState.fixtures[fixIndex].outcome = computedOutcome;
-        dbState.fixtures[fixIndex].locked = true;
+        let fix = dbState.fixtures.find(f => f.id === fixtureId);
+        fix.score = scoreVal;
+        fix.outcome = outcome;
+        fix.locked = true;
 
         for(let name in dbState.users) {
-            let userPick = dbState.users[name].predictions ? dbState.users[name].predictions[fixtureId] : null;
-            if(userPick === computedOutcome) {
-                dbState.users[name].points = (dbState.users[name].points || 0) + 5;
-                dbState.users[name].correct = (dbState.users[name].correct || 0) + 1;
+            if(dbState.users[name].predictions[fixtureId] === outcome) {
+                dbState.users[name].points += 5;
+                dbState.users[name].correct += 1;
             }
         }
-
         pushData();
-    }
-
-    function adminResetSession(username) {
-        if(confirm(`Wipe device lock signature linked to ${username}?`)) {
-            if(currentUser === username) logout();
-            pushData();
-        }
     }
 </script>
 </body>
