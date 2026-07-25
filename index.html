@@ -148,7 +148,6 @@
 
         tr:last-child td { border-bottom: none; }
 
-        /* BRIGHT LIGHT DESIGN FOR CHAT AREA */
         .chat-container-box {
             background: #ffffff;
             border-radius: 12px;
@@ -216,7 +215,6 @@
             border-color: var(--accent-blue) !important;
         }
 
-        /* 1X2 Prediction Cards */
         .prediction-row {
             display: flex;
             justify-content: space-between;
@@ -382,7 +380,7 @@
                     <tbody></tbody>
                 </table>
 
-                <h2 style="margin-top: 40px;">👑 Predictor King Leaderboard</h2>
+                <h2 style="margin-top: 40px;">👑 Predictions Score</h2>
                 <table id="predictor-table">
                     <thead><tr><th>Manager (Username)</th><th>Team Name</th><th>Correct Picks</th><th>Total Points</th></tr></thead>
                     <tbody></tbody>
@@ -420,6 +418,11 @@
 
                     <h3>Score Settlement Center</h3>
                     <div id="admin-fixtures-list"></div>
+                    
+                    <div style="margin: 20px 0; padding: 15px; background: #fff0f0; border-radius: 8px; border: 1px solid #ffcccc;">
+                        <h4 style="margin:0 0 5px 0; color:#d93838;">Danger Zone</h4>
+                        <button style="background:#ff3b3b; color:white; font-size:12px; padding:8px 14px;" onclick="adminWipeFixtures()">Clear All Match Fixtures</button>
+                    </div>
 
                     <h3 style="margin-top: 45px;">🔐 Backup Player Directory (Pins)</h3>
                     <table id="admin-user-table">
@@ -452,7 +455,7 @@
 
     let dbState = {
         users: {},         
-        fixtures: [],      // Wiped clean of old hardcoded names
+        fixtures: [],      
         chat: [],          
         standings: [],     
         visits: 0,
@@ -496,7 +499,13 @@
             if(!dbState.users) dbState.users = {};
             if(!dbState.fixtures) dbState.fixtures = [];
             if(!dbState.chat) dbState.chat = [];
-            if(!dbState.standings) dbState.standings = [];
+            
+            // FORCE CLEAN OLD MEMORY DATA ON FIRST BOOT TO WIPE ARTIFACTS
+            if (isInitial && dbState.fixtures.length > 0 && dbState.fixtures[0].home === "YANITED (Boniface)") {
+                dbState.fixtures = [];
+                dbState.standings = [];
+                updateNeeded = true;
+            }
 
             let updateNeeded = false;
 
@@ -507,6 +516,10 @@
                 }
                 if (!dbState.users[name].predictions) {
                     dbState.users[name].predictions = {};
+                    updateNeeded = true;
+                }
+                if (dbState.users[name].points === undefined) {
+                    dbState.users[name].points = 0;
                     updateNeeded = true;
                 }
             }
@@ -524,7 +537,7 @@
                 renderUI();
             }
         } catch (error) {
-            console.error("Sync running cleanly...");
+            console.error("Connection smooth...");
         }
     }
 
@@ -646,7 +659,7 @@
         container.innerHTML = "";
 
         if(dbState.fixtures.length === 0) {
-            container.innerHTML = "<p style='color:var(--text-muted); font-style:italic;'>No new matches listed. Please wait for the admin to add new teams and matchups!</p>";
+            container.innerHTML = "<p style='color:var(--text-muted); font-style:italic;'>No custom matches listed yet. Open the Admin Control panel to configure fresh matches for your active teams!</p>";
             return;
         }
 
@@ -681,18 +694,35 @@
     }
 
     function renderStandings() {
+        // LEAGUE TABLE GENERATES INDEPENDENTLY FROM CURRENT REGISTERED USERS
         const tbody = document.querySelector('#league-table tbody');
         tbody.innerHTML = "";
         
-        let teams = dbState.standings || [];
-        teams.sort((a,b) => b.pts - a.pts || b.gd - a.gd);
+        let uniqueRegisteredTeams = [];
+        let observedTeamNames = new Set();
 
-        teams.forEach(team => {
-            let r = document.createElement('tr');
-            r.innerHTML = `<td><b>${team.name}</b></td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gd}</td><td style="color:var(--accent-blue)"><b>${team.pts}</b></td>`;
-            tbody.appendChild(r);
-        });
+        for (let username in dbState.users) {
+            let tName = dbState.users[username].teamName || "Unnamed Team";
+            if (!observedTeamNames.has(tName.toLowerCase())) {
+                observedTeamNames.add(tName.toLowerCase());
+                uniqueRegisteredTeams.push({
+                    name: tName,
+                    p: 0, w: 0, d: 0, l: 0, gd: 0, pts: 0
+                });
+            }
+        }
 
+        if (uniqueRegisteredTeams.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); font-style:italic;">No registered clubs yet. Join now to appear in the table standings!</td></tr>`;
+        } else {
+            uniqueRegisteredTeams.forEach(team => {
+                let r = document.createElement('tr');
+                r.innerHTML = `<td><b>${team.name}</b></td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gd}</td><td style="color:var(--accent-blue)"><b>${team.pts}</b></td>`;
+                tbody.appendChild(r);
+            });
+        }
+
+        // PREDICTIONS SCORE LEADERBOARD
         const pTbody = document.querySelector('#predictor-table tbody');
         pTbody.innerHTML = "";
 
@@ -701,6 +731,10 @@
             pUsers.push({ name: name, ...dbState.users[name] });
         }
         pUsers.sort((a,b) => b.points - a.points);
+
+        if(pUsers.length === 0) {
+            pTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No profiles tracked yet.</td></tr>`;
+        }
 
         pUsers.forEach(u => {
             let r = document.createElement('tr');
@@ -814,6 +848,13 @@
             renderUI();
         } else {
             alert("Wrong credentials entry!");
+        }
+    }
+
+    function adminWipeFixtures() {
+        if(confirm("Are you sure you want to delete all current match prediction fixtures? This cannot be undone.")) {
+            dbState.fixtures = [];
+            pushData();
         }
     }
 
