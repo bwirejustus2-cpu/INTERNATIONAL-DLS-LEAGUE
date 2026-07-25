@@ -306,10 +306,10 @@
     <div class="card" id="auth-panel">
         <div id="register-username-view">
             <h3 style="margin-top:0;">Register your username</h3>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Choose a completely unique manager or fan username to start.</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Choose a completely unique participant or fan username to start.</p>
             <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                 <input type="text" id="reg-username" placeholder="Create username..." style="flex-grow: 1;">
-                <button class="btn-success" style="background: var(--accent-blue);" onclick="goToTeamRegistration()">Join as Manager</button>
+                <button class="btn-success" style="background: var(--accent-blue);" onclick="goToTeamRegistration()">Register as Participant</button>
                 <button class="btn-success" style="background: var(--accent-purple);" onclick="registerAsFan()">Become a Fan Only</button>
             </div>
             <p style="font-size: 12px; margin-top: 12px; margin-bottom:0;">
@@ -368,7 +368,7 @@
 
                 <h2 style="margin-top: 40px;">👑 Predictions Score</h2>
                 <table id="predictor-table">
-                    <thead><tr><th style="width: 45px;">Pos</th><th>Manager / Fan (Username)</th><th>Role / Team Name</th><th>Correct Picks</th><th>Total Points</th></tr></thead>
+                    <thead><tr><th style="width: 45px;">Pos</th><th>Participant / Fan (Username)</th><th>Role / Team Name</th><th>Correct Picks</th><th>Total Points</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -573,7 +573,7 @@
         if(currentUser && dbState.users[currentUser]) {
             const userObj = dbState.users[currentUser];
             document.getElementById('active-team').innerText = userObj.isFan ? "Fan Room Mode (No Registered Club)" : (userObj.teamName || 'N/A');
-            document.getElementById('active-role').innerText = userObj.isFan ? "📢 FAN" : "⚽ MANAGER";
+            document.getElementById('active-role').innerText = userObj.isFan ? "📢 FAN" : "⚽ PARTICIPANT";
             document.getElementById('active-role').style.background = userObj.isFan ? "rgba(136, 0, 255, 0.1)" : "rgba(0, 119, 255, 0.1)";
             document.getElementById('active-role').style.color = userObj.isFan ? "var(--accent-purple)" : "var(--accent-blue)";
             document.getElementById('user-pin-display').innerHTML = `Your Account Recovery Pin: <b style="color:var(--accent-orange); font-size:16px;">${userObj.pin}</b>`;
@@ -732,7 +732,6 @@
         let observedTeamNames = new Set();
 
         for (let username in dbState.users) {
-            // Fans are excluded from the competitive team league table standings
             if (dbState.users[username].isFan) continue;
 
             let tName = dbState.users[username].teamName || "Unnamed Team";
@@ -801,7 +800,6 @@
                 actionButtons += `<button class="btn-delete-chat" onclick="deleteChatMessage(${msg.id})">❌ Delete</button>`;
             }
 
-            // Look up if user is a fan to give them a distinctive visual tag
             let isUserFan = dbState.users[msg.user]?.isFan || false;
             let fanTag = isUserFan ? ` <span style="font-size:10px; font-weight:normal; background:rgba(136,0,255,0.1); color:var(--accent-purple); padding:2px 6px; border-radius:10px; margin-left:4px;">FAN</span>` : "";
 
