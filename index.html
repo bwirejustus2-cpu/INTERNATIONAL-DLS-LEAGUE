@@ -186,7 +186,7 @@
         }
 
         .chat-username {
-            font-weight: 800; /* Extra bold for usernames */
+            font-weight: 800;
             color: var(--accent-purple);
         }
 
@@ -306,10 +306,11 @@
     <div class="card" id="auth-panel">
         <div id="register-username-view">
             <h3 style="margin-top:0;">Register your username</h3>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Choose a completely unique manager username to start.</p>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Choose a completely unique manager or fan username to start.</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                 <input type="text" id="reg-username" placeholder="Create username..." style="flex-grow: 1;">
-                <button class="btn-success" style="background: var(--accent-blue);" onclick="goToTeamRegistration()">Next Step</button>
+                <button class="btn-success" style="background: var(--accent-blue);" onclick="goToTeamRegistration()">Join as Manager</button>
+                <button class="btn-success" style="background: var(--accent-purple);" onclick="registerAsFan()">Become a Fan Only</button>
             </div>
             <p style="font-size: 12px; margin-top: 12px; margin-bottom:0;">
                 <a href="#" style="color: var(--accent-purple); text-decoration: none; font-weight: bold;" onclick="toggleAuthViews('recover')">Recover account here →</a>
@@ -336,8 +337,8 @@
         </div>
 
         <div id="welcome-view" class="hidden">
-            <h3 style="margin-top:0;">Welcome back, <span id="active-user" style="color: var(--accent-blue)"></span>!</h3>
-            <p style="font-size:14px; margin: 5px 0 12px 0;">Club Name: <b id="active-team" style="color:var(--accent-orange);"></b></p>
+            <h3 style="margin-top:0;">Welcome back, <span id="active-user" style="color: var(--accent-blue)"></span>! <span id="active-role" style="font-size: 14px; padding: 3px 8px; border-radius: 12px; background: #e5e7eb; margin-left: 5px;"></span></h3>
+            <p style="font-size:14px; margin: 5px 0 12px 0;">Club Info: <b id="active-team" style="color:var(--accent-orange);"></b></p>
             <p id="user-pin-display" style="font-size: 13px; color: var(--text-muted); margin-bottom:15px;"></p>
             <button style="background: rgba(255,59,59,0.1); color: #ff3b3b; border: 1px solid rgba(255,59,59,0.2);" onclick="logout()">Log Out / Switch Account</button>
         </div>
@@ -367,7 +368,7 @@
 
                 <h2 style="margin-top: 40px;">👑 Predictions Score</h2>
                 <table id="predictor-table">
-                    <thead><tr><th style="width: 45px;">Pos</th><th>Manager (Username)</th><th>Team Name</th><th>Correct Picks</th><th>Total Points</th></tr></thead>
+                    <thead><tr><th style="width: 45px;">Pos</th><th>Manager / Fan (Username)</th><th>Role / Team Name</th><th>Correct Picks</th><th>Total Points</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -416,7 +417,7 @@
 
                     <h3 style="margin-top: 45px;">🔐 Backup Player Directory (Pins)</h3>
                     <table id="admin-user-table">
-                        <thead><tr><th style="background:var(--accent-orange)">Manager</th><th style="background:var(--accent-orange)">Registered Team</th><th style="background:var(--accent-orange)">Secret Pin</th><th style="background:var(--accent-orange)">Session Action</th></tr></thead>
+                        <thead><tr><th style="background:var(--accent-orange)">User Profile</th><th style="background:var(--accent-orange)">Status/Club</th><th style="background:var(--accent-orange)">Secret Pin</th><th style="background:var(--accent-orange)">Session Action</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -465,6 +466,13 @@
         }, 5000);
     };
 
+    window.addEventListener('beforeunload', function() {
+        if (currentUser && dbState.users && dbState.users[currentUser]) {
+            dbState.users[currentUser].lastSeen = 0;
+            navigator.sendBeacon(API_URL, JSON.stringify(dbState));
+        }
+    });
+
     function checkLocalSession() {
         if(currentUser) {
             document.getElementById('register-username-view').classList.add('hidden');
@@ -506,6 +514,15 @@
                     dbState.users[name].predictions = {};
                     updateNeeded = true;
                 }
+                if (dbState.users[name].isFan === undefined) {
+                    dbState.users[name].isFan = false;
+                    updateNeeded = true;
+                }
+            }
+
+            if (currentUser && dbState.users[currentUser]) {
+                dbState.users[currentUser].lastSeen = Date.now();
+                updateNeeded = true;
             }
 
             if (isInitial) {
@@ -540,13 +557,26 @@
     }
 
     function renderUI() {
-        let actualRegisteredCount = Object.keys(dbState.users || {}).length;
-        document.getElementById('online-counter').innerText = `🟢 ${actualRegisteredCount} participant${actualRegisteredCount !== 1 ? 's' : ''} online`;
+        let now = Date.now();
+        let dynamicOnlineCount = 0;
+        
+        for (let name in dbState.users) {
+            let lastSeen = dbState.users[name].lastSeen || 0;
+            if (now - lastSeen < 15000) { 
+                dynamicOnlineCount++;
+            }
+        }
+
+        document.getElementById('online-counter').innerText = `🟢 ${dynamicOnlineCount} participant${dynamicOnlineCount !== 1 ? 's' : ''} online`;
         document.getElementById('admin-visits').innerText = `📊 ${dbState.visits || 0} visits`;
 
         if(currentUser && dbState.users[currentUser]) {
-            document.getElementById('active-team').innerText = dbState.users[currentUser].teamName || 'N/A';
-            document.getElementById('user-pin-display').innerHTML = `Your Account Recovery Pin: <b style="color:var(--accent-orange); font-size:16px;">${dbState.users[currentUser].pin}</b>`;
+            const userObj = dbState.users[currentUser];
+            document.getElementById('active-team').innerText = userObj.isFan ? "Fan Room Mode (No Registered Club)" : (userObj.teamName || 'N/A');
+            document.getElementById('active-role').innerText = userObj.isFan ? "📢 FAN" : "⚽ MANAGER";
+            document.getElementById('active-role').style.background = userObj.isFan ? "rgba(136, 0, 255, 0.1)" : "rgba(0, 119, 255, 0.1)";
+            document.getElementById('active-role').style.color = userObj.isFan ? "var(--accent-purple)" : "var(--accent-blue)";
+            document.getElementById('user-pin-display').innerHTML = `Your Account Recovery Pin: <b style="color:var(--accent-orange); font-size:16px;">${userObj.pin}</b>`;
         }
 
         renderFixtures();
@@ -585,6 +615,29 @@
         document.getElementById('register-team-view').classList.remove('hidden');
     }
 
+    function registerAsFan() {
+        let username = document.getElementById('reg-username').value.trim();
+        if(!username) return alert("Enter a valid username!");
+        if(dbState.users[username]) return alert("Username already taken!");
+
+        dbState.users[username] = {
+            pin: Math.floor(1000 + Math.random() * 9000).toString(),
+            teamName: "",
+            isFan: true,
+            points: 0,
+            correct: 0,
+            lastSeen: Date.now(),
+            predictions: {}
+        };
+
+        currentUser = username;
+        localStorage.setItem('dls_user', username);
+        document.getElementById('reg-username').value = "";
+        
+        checkLocalSession();
+        pushData();
+    }
+
     function completeRegistration() {
         let teamName = document.getElementById('reg-teamname').value.trim();
         if(!teamName) return alert("Please enter your team name!");
@@ -592,8 +645,10 @@
         dbState.users[tempUsername] = {
             pin: Math.floor(1000 + Math.random() * 9000).toString(),
             teamName: teamName,
+            isFan: false,
             points: 0,
             correct: 0,
+            lastSeen: Date.now(),
             predictions: {}
         };
 
@@ -616,16 +671,20 @@
 
         currentUser = username;
         localStorage.setItem('dls_user', username);
+        dbState.users[currentUser].lastSeen = Date.now();
         checkLocalSession();
-        renderUI();
+        pushData();
     }
 
     function logout() {
+        if (currentUser && dbState.users[currentUser]) {
+            dbState.users[currentUser].lastSeen = 0;
+        }
         localStorage.removeItem('dls_user');
         currentUser = null;
         document.getElementById('welcome-view').classList.add('hidden');
         document.getElementById('register-username-view').classList.remove('hidden');
-        renderUI();
+        pushData();
     }
 
     function renderFixtures() {
@@ -659,14 +718,13 @@
     }
 
     function submitPrediction(fixtureId, selection) {
-        if(!currentUser) return alert("Please create an active profile to log predictions!");
+        if(!currentUser) return alert("Please register a valid profile to log predictions!");
         dbState.users[currentUser].predictions[fixtureId] = selection;
         renderFixtures();
         pushData();
     }
 
     function renderStandings() {
-        // 1. Process League Leaderboards
         const tbody = document.querySelector('#league-table tbody');
         tbody.innerHTML = "";
         
@@ -674,6 +732,9 @@
         let observedTeamNames = new Set();
 
         for (let username in dbState.users) {
+            // Fans are excluded from the competitive team league table standings
+            if (dbState.users[username].isFan) continue;
+
             let tName = dbState.users[username].teamName || "Unnamed Team";
             if (!observedTeamNames.has(tName.toLowerCase())) {
                 observedTeamNames.add(tName.toLowerCase());
@@ -699,7 +760,6 @@
             });
         }
 
-        // 2. Process Predictions Leaderboards
         const pTbody = document.querySelector('#predictor-table tbody');
         pTbody.innerHTML = "";
 
@@ -710,14 +770,15 @@
         pUsers.sort((a,b) => b.points - a.points);
 
         if (pUsers.length === 0) {
-            pTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No registered managers yet.</td></tr>`;
+            pTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No registered users yet.</td></tr>`;
         } else {
             pUsers.forEach((u, index) => {
+                let roleDisplay = u.isFan ? `<i style="color:var(--accent-purple)">📢 Fan (No Club)</i>` : `<span style="color:var(--accent-orange); font-weight:bold;">${u.teamName}</span>`;
                 let r = document.createElement('tr');
                 r.innerHTML = `
                     <td style="font-weight: bold; color: var(--text-muted); text-align: center;">${index + 1}</td>
                     <td>👤 <b>${u.name}</b></td>
-                    <td><span style="color:var(--accent-orange); font-weight:bold;">${u.teamName || 'N/A'}</span></td>
+                    <td>${roleDisplay}</td>
                     <td>${u.correct || 0}</td>
                     <td style="color:var(--accent-green); font-weight:bold;">${u.points || 0} pts</td>`;
                 pTbody.appendChild(r);
@@ -740,11 +801,14 @@
                 actionButtons += `<button class="btn-delete-chat" onclick="deleteChatMessage(${msg.id})">❌ Delete</button>`;
             }
 
-            // Username is rendered in bold tags
+            // Look up if user is a fan to give them a distinctive visual tag
+            let isUserFan = dbState.users[msg.user]?.isFan || false;
+            let fanTag = isUserFan ? ` <span style="font-size:10px; font-weight:normal; background:rgba(136,0,255,0.1); color:var(--accent-purple); padding:2px 6px; border-radius:10px; margin-left:4px;">FAN</span>` : "";
+
             div.innerHTML = `
                 <div class="chat-header">
                     <div>
-                        <span class="chat-username"><b>${msg.user}</b></span>
+                        <span class="chat-username"><b>${msg.user}</b></span>${fanTag}
                         ${msg.edited ? `<span style="font-size:10px; font-style:italic; color:var(--text-muted); margin-left:5px;">(edited)</span>` : ''}
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
@@ -805,7 +869,7 @@
     }
 
     function deleteChatMessage(id) {
-        if(confirm("Permanently delete this fan message from database room?")) {
+        if(confirm("Permanently delete this message from database room?")) {
             dbState.chat = dbState.chat.filter(m => m.id !== id);
             pushData();
         }
@@ -883,10 +947,11 @@
         } else {
             initialKeys.forEach(name => {
                 let uData = dbState.users[name];
+                let typeText = uData.isFan ? "📢 FAN" : `⚽ ${uData.teamName}`;
                 let row = document.createElement('tr');
                 row.innerHTML = `
                     <td><b>${name}</b></td>
-                    <td>${uData.teamName || 'N/A'}</td>
+                    <td>${typeText}</td>
                     <td><code style="font-size:15px; background:#f1f5f9; padding:4px 8px; border-radius:4px; font-weight:bold; color:var(--accent-orange);">${uData.pin || '----'}</code></td>
                     <td><button style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); padding:5px 10px; font-size:12px;" onclick="forceClearSession('${name}')">Wipe User</button></td>
                 `;
