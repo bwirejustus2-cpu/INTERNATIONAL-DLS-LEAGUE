@@ -6,24 +6,26 @@
     <title>DLS Tournament Hub</title>
     <style>
         :root {
-            --bg-color: #0b111e;
-            --panel-bg: #131c2e;
-            --panel-sub: #1b263b;
-            --accent-color: #00ff66;
-            --accent-hover: #00cc52;
-            --text-color: #ffffff;
-            --text-muted: #8da2fb;
-            --border-color: #24344f;
-            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            --bg-color: #f0f4f8;
+            --panel-bg: #ffffff;
+            --panel-sub: #e6f0fa;
+            --accent-green: #00cc44;
+            --accent-blue: #0077ff;
+            --accent-orange: #ff7700;
+            --accent-purple: #8800ff;
+            --text-dark: #111827;
+            --text-muted: #4b5563;
+            --border-color: #d1d5db;
+            --card-shadow: 0 4px 20px rgba(0, 77, 255, 0.08);
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-color);
+            color: var(--text-dark);
             margin: 0;
             padding: 20px;
-            background-image: radial-gradient(circle at top right, #1a2942 0%, var(--bg-color) 60%);
+            background-image: linear-gradient(135deg, #e6f0fa 0%, #f3e8ff 50%, #fff7ed 100%);
             background-attachment: fixed;
         }
 
@@ -36,24 +38,28 @@
             text-align: center;
             margin-bottom: 30px;
             padding: 20px 0;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 16px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(136, 0, 255, 0.2);
         }
 
         h1 { 
-            margin-bottom: 5px; 
+            margin: 0 0 10px 0; 
             font-size: 2.5rem;
-            text-shadow: 0 2px 10px rgba(0, 255, 102, 0.2);
             letter-spacing: 1px;
+            color: #ffffff;
         }
 
         .status-bar {
             font-size: 14px;
-            color: var(--accent-color);
+            color: #ffffff;
             font-weight: bold;
-            background: rgba(0, 255, 102, 0.1);
+            background: rgba(255, 255, 255, 0.2);
             display: inline-block;
             padding: 6px 16px;
             border-radius: 20px;
-            border: 1px solid rgba(0, 255, 102, 0.2);
+            backdrop-filter: blur(5px);
         }
 
         .grid {
@@ -68,19 +74,18 @@
 
         .card {
             background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border: 2px solid #ffffff;
+            border-radius: 16px;
             padding: 24px;
             margin-bottom: 25px;
             box-shadow: var(--card-shadow);
-            backdrop-filter: blur(10px);
         }
 
         .tabs {
             display: flex;
             gap: 8px;
             margin-bottom: 25px;
-            border-bottom: 2px solid var(--border-color);
+            border-bottom: 3px solid var(--border-color);
             padding-bottom: 5px;
             overflow-x: auto;
         }
@@ -99,14 +104,14 @@
         }
 
         .tab-btn:hover {
-            color: white;
-            background: rgba(255,255,255,0.05);
+            color: var(--accent-blue);
+            background: rgba(0, 119, 255, 0.05);
         }
 
         .tab-btn.active {
-            color: var(--accent-color);
-            background: rgba(0, 255, 102, 0.05);
-            border-bottom: 3px solid var(--accent-color);
+            color: var(--accent-purple);
+            background: rgba(136, 0, 255, 0.08);
+            border-bottom: 4px solid var(--accent-purple);
         }
 
         .tab-content { display: none; }
@@ -117,9 +122,9 @@
             border-collapse: separate;
             border-spacing: 0;
             margin-top: 15px;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
-            border: 1px solid var(--border-color);
+            border: 2px solid #e5e7eb;
         }
 
         th, td {
@@ -128,8 +133,8 @@
         }
 
         th { 
-            color: var(--text-muted); 
-            background-color: var(--panel-sub);
+            color: white; 
+            background-color: var(--accent-blue);
             font-weight: 600;
             text-transform: uppercase;
             font-size: 12px;
@@ -137,28 +142,28 @@
         }
 
         td {
-            border-bottom: 1px solid var(--border-color);
-            background-color: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid #e5e7eb;
+            background-color: #ffffff;
         }
 
         tr:last-child td { border-bottom: none; }
 
-        /* LIGHT THEMING FOR CHAT AREA */
+        /* BRIGHT LIGHT DESIGN FOR CHAT AREA */
         .chat-container-box {
             background: #ffffff;
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 15px;
-            border: 1px solid #dddddd;
+            border: 2px solid #e5e7eb;
             color: #000000;
         }
 
         .chat-box {
             height: 350px;
             overflow-y: auto;
-            border: 1px solid #e0e0e0;
+            border: 1px solid #e5e7eb;
             padding: 15px;
-            border-radius: 6px;
-            background: #f9f9f9;
+            border-radius: 8px;
+            background: #f9fafb;
             margin-bottom: 15px;
         }
 
@@ -167,14 +172,14 @@
             padding: 12px;
             border-radius: 8px;
             background: #ffffff;
-            border: 1px solid #e6e6e6;
+            border: 1px solid #e5e7eb;
             color: #000000;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
 
         .chat-header {
             font-size: 12px;
-            color: #666666;
+            color: var(--text-muted);
             margin-bottom: 6px;
             display: flex;
             justify-content: space-between;
@@ -182,43 +187,45 @@
 
         .chat-username {
             font-weight: bold;
-            color: #0056b3;
+            color: var(--accent-blue);
         }
 
         .chat-actions a {
-            color: #0088cc;
+            color: var(--accent-purple);
             font-size: 11px;
             margin-left: 12px;
             text-decoration: none;
             cursor: pointer;
+            font-weight: bold;
         }
 
         .reply-box {
             margin-left: 25px;
-            border-left: 3px solid #0056b3;
-            background: #f0f5fa;
+            border-left: 4px solid var(--accent-orange);
+            background: #fffaf0;
         }
 
         .chat-container-box textarea {
             background-color: #ffffff !important;
-            border: 1px solid #cccccc !important;
+            border: 2px solid #d1d5db !important;
             color: #000000 !important;
+            border-radius: 8px;
         }
 
         .chat-container-box textarea:focus {
-            border-color: #0056b3 !important;
+            border-color: var(--accent-blue) !important;
         }
 
-        /* 1X2 Prediction Slips */
+        /* 1X2 Prediction Cards */
         .prediction-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px;
+            padding: 18px;
             background: var(--panel-sub);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            margin-bottom: 10px;
+            border: 2px solid #d0e1fd;
+            border-radius: 12px;
+            margin-bottom: 12px;
         }
 
         .btn-group {
@@ -227,27 +234,28 @@
         }
 
         .predict-btn {
-            background-color: var(--bg-color);
-            border: 1px solid var(--border-color);
-            color: white;
+            background-color: #ffffff;
+            border: 2px solid #cbd5e1;
+            color: var(--text-dark);
             padding: 10px 20px;
             font-weight: 800;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             min-width: 55px;
             transition: all 0.2s ease;
         }
 
         .predict-btn:hover:not(:disabled) {
-            border-color: var(--accent-color);
-            color: var(--accent-color);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+            background-color: rgba(0, 119, 255, 0.05);
         }
 
         .predict-btn.selected {
-            background-color: var(--accent-color);
-            color: #000000;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 10px rgba(0, 255, 102, 0.4);
+            background-color: var(--accent-green);
+            color: #ffffff;
+            border-color: var(--accent-green);
+            box-shadow: 0 4px 10px rgba(0, 204, 68, 0.3);
         }
 
         .predict-btn:disabled {
@@ -256,40 +264,45 @@
         }
 
         input[type="text"], input[type="password"], textarea {
-            background-color: var(--bg-color);
-            border: 1px solid var(--border-color);
-            color: white;
+            background-color: #ffffff;
+            border: 2px solid #cbd5e1;
+            color: var(--text-dark);
             padding: 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 14px;
             transition: border-color 0.3s ease;
         }
 
         input:focus, textarea:focus {
             outline: none;
-            border-color: var(--accent-color);
+            border-color: var(--accent-blue);
         }
 
         button {
             cursor: pointer;
             font-weight: bold;
             padding: 12px 20px;
-            border-radius: 6px;
+            border-radius: 8px;
             border: none;
             transition: all 0.2s ease;
         }
 
         .btn-success {
-            background-color: var(--accent-color);
-            color: #000000;
+            background-color: var(--accent-orange);
+            color: white;
+            box-shadow: 0 4px 10px rgba(255, 119, 0, 0.2);
         }
 
         .btn-success:hover {
-            background-color: var(--accent-hover);
+            background-color: #e66b00;
             transform: translateY(-1px);
         }
 
         .hidden { display: none !important; }
+
+        h2, h3 {
+            color: var(--accent-purple);
+        }
     </style>
 </head>
 <body>
@@ -310,17 +323,17 @@
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Choose a completely unique manager username to start.</p>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <input type="text" id="reg-username" placeholder="Create username..." style="flex-grow: 1;">
-                <button class="btn-success" onclick="goToTeamRegistration()">Next Step</button>
+                <button class="btn-success" style="background: var(--accent-blue);" onclick="goToTeamRegistration()">Next Step</button>
             </div>
             <p style="font-size: 12px; margin-top: 12px; margin-bottom:0;">
-                <a href="#" style="color: var(--accent-color); text-decoration: none;" onclick="toggleAuthViews('recover')">Accidentally cleared cache? Recover account here →</a>
+                <a href="#" style="color: var(--accent-purple); text-decoration: none; font-weight: bold;" onclick="toggleAuthViews('recover')">Recover account here →</a>
             </p>
         </div>
 
         <!-- Step 2: Register Team Name -->
         <div id="register-team-view" class="hidden">
             <h3 style="margin-top:0;">Register your team</h3>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Welcome <b id="temp-username-display" style="color:var(--accent-color)"></b>! Now type your official club or team name below.</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Welcome <b id="temp-username-display" style="color:var(--accent-blue)"></b>! Now type your official club or team name below.</p>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <input type="text" id="reg-teamname" placeholder="Type team name..." style="flex-grow: 1;">
                 <button class="btn-success" onclick="completeRegistration()">Complete Registration</button>
@@ -333,13 +346,13 @@
                 <input type="text" id="rec-username" placeholder="Username...">
                 <input type="text" id="rec-pin" placeholder="4-Digit Secret Pin...">
             </div>
-            <button class="btn-success" onclick="recoverAccount()">Login</button>
-            <button style="background:transparent; color:white; border: 1px solid var(--border-color);" onclick="toggleAuthViews('register')">Back</button>
+            <button class="btn-success" style="background: var(--accent-blue);" onclick="recoverAccount()">Login</button>
+            <button style="background:transparent; color:var(--text-dark); border: 2px solid var(--border-color);" onclick="toggleAuthViews('register')">Back</button>
         </div>
 
         <div id="welcome-view" class="hidden">
-            <h3 style="margin-top:0;">Welcome back, <span id="active-user" style="color: var(--accent-color)"></span>!</h3>
-            <p style="font-size:14px; margin: 5px 0 12px 0;">Club Name: <b id="active-team" style="color:#4facfe;"></b></p>
+            <h3 style="margin-top:0;">Welcome back, <span id="active-user" style="color: var(--accent-blue)"></span>!</h3>
+            <p style="font-size:14px; margin: 5px 0 12px 0;">Club Name: <b id="active-team" style="color:var(--accent-orange);"></b></p>
             <p id="user-pin-display" style="font-size: 13px; color: var(--text-muted); margin-bottom:15px;"></p>
             <button style="background: rgba(255,59,59,0.1); color: #ff3b3b; border: 1px solid rgba(255,59,59,0.2);" onclick="logout()">Log Out / Switch Account</button>
         </div>
@@ -365,7 +378,7 @@
             <div id="standings-tab" class="tab-content card">
                 <h2>League Table</h2>
                 <table id="league-table">
-                    <thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>PTS</th></tr></thead>
+                    <thead><tr><th style="background:var(--accent-purple)">Team</th><th style="background:var(--accent-purple)">P</th><th style="background:var(--accent-purple)">W</th><th style="background:var(--accent-purple)">D</th><th style="background:var(--accent-purple)">L</th><th style="background:var(--accent-purple)">GD</th><th style="background:var(--accent-purple)">PTS</th></tr></thead>
                     <tbody></tbody>
                 </table>
 
@@ -376,17 +389,17 @@
                 </table>
             </div>
 
-            <!-- FAN ZONE CHAT MODULE (LIGHT TILED BACKGROUND DESIGN) -->
+            <!-- FAN ZONE CHAT MODULE -->
             <div id="chat-tab" class="tab-content card">
                 <h2 style="margin-bottom: 15px;">Fan Zone Chat</h2>
                 <div class="chat-container-box">
                     <div class="chat-box" id="chat-box"></div>
-                    <div id="reply-indicator" style="font-size: 12px; margin-bottom: 8px; color: #0056b3; font-weight: bold;" class="hidden">
+                    <div id="reply-indicator" style="font-size: 12px; margin-bottom: 8px; color: var(--accent-orange); font-weight: bold;" class="hidden">
                         Replying to comment... <a href="#" style="color: #ff3b3b; margin-left:10px; text-decoration:none;" onclick="cancelReply()">Cancel</a>
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <textarea id="chat-input" style="flex-grow: 1; resize: none; height: 40px; padding: 10px;" placeholder="Type a message or use keyboard emojis/stickers..."></textarea>
-                        <button class="btn-success" style="background:#0056b3; color:white;" onclick="sendChat()">Post</button>
+                        <button class="btn-success" style="background:var(--accent-blue); color:white;" onclick="sendChat()">Post</button>
                     </div>
                 </div>
             </div>
@@ -396,7 +409,7 @@
                 <h2>Admin Panel Authentication</h2>
                 <div id="admin-login-box">
                     <input type="password" id="admin-pass" placeholder="Enter Admin Password..." style="margin-right: 10px;">
-                    <button class="btn-success" onclick="verifyAdmin()">Login</button>
+                    <button class="btn-success" style="background: var(--accent-blue);" onclick="verifyAdmin()">Login</button>
                 </div>
                 
                 <div id="admin-controls" class="hidden">
@@ -410,7 +423,7 @@
 
                     <h3 style="margin-top: 45px;">🔐 Backup Player Directory (Pins)</h3>
                     <table id="admin-user-table">
-                        <thead><tr><th>Manager</th><th>Registered Team</th><th>Secret Pin</th><th>Session Action</th></tr></thead>
+                        <thead><tr><th style="background:var(--accent-orange)">Manager</th><th style="background:var(--accent-orange)">Registered Team</th><th style="background:var(--accent-orange)">Secret Pin</th><th style="background:var(--accent-orange)">Session Action</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -418,8 +431,8 @@
         </div>
 
         <div class="sidebar">
-            <div class="card">
-                <h3 style="margin-top:0; color: var(--accent-color);">How to Play</h3>
+            <div class="card" style="border-left: 5px solid var(--accent-orange);">
+                <h3 style="margin-top:0; color: var(--accent-orange);">How to Play</h3>
                 <ul style="padding-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.8; margin-bottom:0;">
                     <li>Select <b>1</b> for a Home Team win.</li>
                     <li>Select <b>X</b> to predict a Draw game.</li>
@@ -439,7 +452,7 @@
 
     let dbState = {
         users: {},         
-        fixtures: [],      
+        fixtures: [],      // Wiped clean of old hardcoded names
         chat: [],          
         standings: [],     
         visits: 0,
@@ -496,10 +509,6 @@
                     dbState.users[name].predictions = {};
                     updateNeeded = true;
                 }
-                if (!dbState.users[name].teamName) {
-                    dbState.users[name].teamName = "Unnamed Team";
-                    updateNeeded = true;
-                }
             }
 
             if (isInitial) {
@@ -541,7 +550,7 @@
 
         if(currentUser && dbState.users[currentUser]) {
             document.getElementById('active-team').innerText = dbState.users[currentUser].teamName || 'N/A';
-            document.getElementById('user-pin-display').innerHTML = `Your Account Recovery Pin: <b style="color:var(--accent-color); font-size:16px;">${dbState.users[currentUser].pin}</b> <br><small style='color:var(--text-muted); font-size:11px;'>Write this down! Use this if you clear your browser cache.</small>`;
+            document.getElementById('user-pin-display').innerHTML = `Your Account Recovery Pin: <b style="color:var(--accent-orange); font-size:16px;">${dbState.users[currentUser].pin}</b> <br><small style='color:var(--text-muted); font-size:11px;'>Write this down! Use this if you clear your browser cache.</small>`;
         }
 
         renderFixtures();
@@ -569,7 +578,6 @@
         }
     }
 
-    // --- TWO-STEP PROGRESSIVE REGISTRATION FLOW ---
     function goToTeamRegistration() {
         let username = document.getElementById('reg-username').value.trim();
         if(!username) return alert("Enter a valid username!");
@@ -633,13 +641,12 @@
         renderUI();
     }
 
-    // --- RENDER MATRIX SLIPS ---
     function renderFixtures() {
         const container = document.getElementById('fixtures-list');
         container.innerHTML = "";
 
         if(dbState.fixtures.length === 0) {
-            container.innerHTML = "<p style='color:var(--text-muted);'>No upcoming matches listed.</p>";
+            container.innerHTML = "<p style='color:var(--text-muted); font-style:italic;'>No new matches listed. Please wait for the admin to add new teams and matchups!</p>";
             return;
         }
 
@@ -682,7 +689,7 @@
 
         teams.forEach(team => {
             let r = document.createElement('tr');
-            r.innerHTML = `<td><b>${team.name}</b></td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gd}</td><td style="color:var(--accent-color)"><b>${team.pts}</b></td>`;
+            r.innerHTML = `<td><b>${team.name}</b></td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gd}</td><td style="color:var(--accent-blue)"><b>${team.pts}</b></td>`;
             tbody.appendChild(r);
         });
 
@@ -697,12 +704,11 @@
 
         pUsers.forEach(u => {
             let r = document.createElement('tr');
-            r.innerHTML = `<td>👤 <b>${u.name}</b></td><td><span style="color:#4facfe;">${u.teamName || 'N/A'}</span></td><td>${u.correct || 0}</td><td style="color:var(--accent-color); font-weight:bold;">${u.points || 0} pts</td>`;
+            r.innerHTML = `<td>👤 <b>${u.name}</b></td><td><span style="color:var(--accent-orange); font-weight:bold;">${u.teamName || 'N/A'}</span></td><td>${u.correct || 0}</td><td style="color:var(--accent-green); font-weight:bold;">${u.points || 0} pts</td>`;
             pTbody.appendChild(r);
         });
     }
 
-    // --- LEAGUE CHAT MODULES ---
     function renderChat() {
         const box = document.getElementById('chat-box');
         const scrollAtBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 50;
@@ -730,7 +736,7 @@
 
         div.innerHTML = `
             <div class="chat-header">
-                <div><span class="chat-username">${msg.user}</span><span style="color:#666666; margin-left:8px;">${msg.time}</span></div>
+                <div><span class="chat-username">${msg.user}</span><span style="color:var(--text-muted); margin-left:8px;">${msg.time}</span></div>
                 <span class="chat-actions">
                     ${!isReply ? `<a onclick="setReplyTarget(${msg.id})">↩️ Reply</a>` : ''}
                     ${canEdit ? `<a onclick="editChat(${msg.id})">✏️ Edit</a> <a onclick="boldChat(${msg.id})"><b>B</b></a> <a onclick="deleteChat(${msg.id})" style="color:#ff3b3b;">🗑️ Delete</a>` : ''}
@@ -799,7 +805,6 @@
         }
     }
 
-    // --- LEAGUE ADMINISTRATIVE CONTROLS ---
     function verifyAdmin() {
         let password = document.getElementById('admin-pass').value;
         if(password === "admin123") { 
@@ -827,7 +832,7 @@
                     <span><b>${fix.home} vs ${fix.away}</b></span>
                     <div>
                         <input type="text" id="score-${fix.id}" placeholder="e.g. 2-1" style="width:70px; padding:6px; text-align:center;" value="${fix.score || ''}">
-                        <button class="btn-success" style="padding: 6px 12px; font-size:12px;" onclick="settleMatch(${fix.id})" ${fix.locked ? 'style="opacity:0.5;"' : ''}>Lock Score</button>
+                        <button class="btn-success" style="padding: 6px 12px; font-size:12px; background:var(--accent-blue);" onclick="settleMatch(${fix.id})" ${fix.locked ? 'style="opacity:0.5;"' : ''}>Lock Score</button>
                     </div>
                 </div>
             `;
@@ -838,7 +843,7 @@
         tbody.innerHTML = "";
         for(let name in dbState.users) {
             let tr = document.createElement('tr');
-            tr.innerHTML = `<td>👤 <b>${name}</b></td><td><span style="color:#4facfe;">${dbState.users[name].teamName || 'N/A'}</span></td><td style="color:var(--accent-color)"><b>${dbState.users[name].pin}</b></td><td><button style="background:rgba(255,255,255,0.05); color:white; border: 1px solid var(--border-color); padding: 5px 10px; font-size:12px;" onclick="adminResetSession('${name}')">Reset Lock</button></td>`;
+            tr.innerHTML = `<td>👤 <b>${name}</b></td><td><span style="color:var(--accent-orange); font-weight:bold;">${dbState.users[name].teamName || 'N/A'}</span></td><td style="color:var(--accent-blue)"><b>${dbState.users[name].pin}</b></td><td><button style="background:rgba(0,0,0,0.05); color:var(--text-dark); border: 1px solid var(--border-color); padding: 5px 10px; font-size:12px;" onclick="adminResetSession('${name}')">Reset Lock</button></td>`;
             tbody.appendChild(tr);
         }
     }
