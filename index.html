@@ -329,7 +329,7 @@
 <script>
     // --- DATABASE CONFIGURATION ---
     const BIN_ID = '6a632995da38895dfe88fbfc'; 
-    const SECRET_KEY = 'YOUR_SECRET_KEY_HERE'; // Add your JSONBin Master Secret Key here
+    const SECRET_KEY = '$2a$10$LnRR7.WaC/FO4X0yPuJ0XedNXXhZ/Y2nb8erhagnR3NQCTjIskqya'; 
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
     // --- LIVE MEMORY BUFFER ---
@@ -682,7 +682,7 @@
     // --- LEAGUE ADMINISTRATIVE LAUNCHERS ---
     function verifyAdmin() {
         let password = document.getElementById('admin-pass').value;
-        if(password === "admin123") { // Change this to your custom admin password
+        if(password === "admin123") { // Change this to your preferred admin password
             isAdmin = true;
             document.getElementById('admin-login-box').classList.add('hidden');
             document.getElementById('admin-controls').classList.remove('hidden');
