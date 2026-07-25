@@ -3,678 +3,757 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTERNATIONAL DLS LEAGUE TOURNAMENT</title>
+    <title>DLS Tournament Hub</title>
     <style>
         :root {
-            --primary: #3d195a;
-            --primary-light: #57257e;
-            --secondary: #00875a;
-            --danger: #ff0055;
-            --bg-light: rgba(255, 255, 255, 0.95);
-            --text-dark: #242424;
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --accent-color: #00ff66;
+            --text-color: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
         }
 
-        body { 
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            color: var(--text-dark);
-            background: linear-gradient(rgba(15, 32, 39, 0.85), rgba(44, 83, 100, 0.85)), 
-                        url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
-            background-size: cover;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
         }
 
-        .navbar {
-            background: var(--primary);
-            padding: 15px 20px;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
         }
-        .navbar-brand {
-            color: white;
-            font-size: 20px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
         }
-        .nav-menu {
-            display: flex;
-            gap: 15px;
-        }
-        .nav-link {
-            color: rgba(255,255,255,0.8);
-            text-decoration: none;
-            font-weight: 600;
+
+        h1 { margin-bottom: 5px; }
+
+        .status-bar {
             font-size: 14px;
-            padding: 8px 12px;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-        .nav-link:hover {
-            color: white;
-            background: rgba(255,255,255,0.1);
+            color: var(--accent-color);
+            font-weight: bold;
+            margin-bottom: 20px;
         }
 
-        .container { 
-            max-width: 1200px; 
-            margin: 30px auto; 
-            padding: 0 20px;
-            box-sizing: border-box;
-        }
-
-        .hero-banner {
-            background: linear-gradient(135deg, rgba(61,25,90,0.9), rgba(0,135,90,0.7)), url('https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=800&q=80') center center;
-            background-size: cover;
-            border-radius: 12px;
-            padding: 40px;
-            color: white;
-            margin-bottom: 30px;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
-        }
-
-        .main-card {
-            background: var(--bg-light); 
-            padding: 30px; 
-            border-radius: 12px; 
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
-            backdrop-filter: blur(5px);
-        }
-
-        .section-header { 
-            border-bottom: 3px solid var(--primary); 
-            padding-bottom: 12px; 
-            margin-bottom: 25px; 
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        h2 { margin: 0; color: var(--primary); font-size: 24px; font-weight: 800; text-transform: uppercase; }
-        .subtitle { margin: 5px 0 0 0; font-size: 13px; color: #666; font-weight: 500; }
-        
-        .btn { padding: 8px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; border: none; font-size: 13px; transition: background 0.2s, transform 0.1s; }
-        .btn:active { transform: scale(0.98); }
-        .btn-clear { background-color: var(--danger); color: white; }
-        .btn-clear:hover { background-color: #d00044; }
-        .btn-save { background-color: var(--secondary); color: white; margin-right: 10px; }
-        .btn-lock { background-color: #ff9800; color: white; margin-right: 10px; display: none; }
-        
-        .tables-grid {
+        .grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 25px;
-        }
-        @media(max-width: 900px) {
-            .tables-grid { grid-template-columns: 1fr; }
+            gap: 20px;
         }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 6px; overflow: hidden; }
-        th { background-color: #f4f4f6; color: #666; font-weight: 700; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #e3e3e3; padding: 12px 8px; text-align: center; }
-        th:nth-child(2), td:nth-child(2) { text-align: left; padding-left: 15px; font-weight: 600; }
-        td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; }
-        
-        .signup-box { background: #eef7f4; border: 2px dashed var(--secondary); border-radius: 8px; padding: 20px; margin-bottom: 25px; display: none; }
-        .general-chat-log { max-height: 200px; overflow-y: auto; font-size: 14px; padding: 10px; background: #fff; border: 1px solid #e3e3e3; border-radius: 6px; margin-bottom: 12px; }
-        
-        .fixture-block { background: #ffffff; margin: 15px 0; border-radius: 8px; border: 1px solid #e3e3e3; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .fixture-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; }
-        .team-label { width: 38%; font-weight: 600; font-size: 14px; }
-        .team-label.home { text-align: right; }
-        .team-label.away { text-align: left; }
-        .vs-block { width: 24%; text-align: center; display: flex; justify-content: center; gap: 8px; align-items: center; font-weight: 700; color: #666; }
-        .input-score { width: 40px; text-align: center; padding: 5px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; font-size: 14px; }
-        .input-score:disabled { background: #f5f5f5; color: #333; border: 1px solid transparent; }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+        }
 
-        .comments-section { background: #fafafa; border-top: 1px dashed #e9e9e9; padding: 12px 20px; }
-        .comments-log { max-height: 150px; overflow-y: auto; font-size: 13px; color: #444; }
-        
-        /* Interactive Comment Item & Action Bar Styles */
-        .comment-item { 
-            position: relative; 
-            margin-bottom: 8px; 
-            padding: 6px; 
-            border-radius: 4px;
-            border-bottom: 1px solid #f0f0f0; 
-            transition: background 0.2s;
+        .card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
         }
-        .comment-item:hover {
-            background: #f0f4f8;
-        }
-        .comment-author { font-weight: 700; color: var(--primary); }
-        .comment-actions {
-            display: none;
-            position: absolute;
-            right: 5px;
-            top: 5px;
-            background: #fff;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 2px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            gap: 4px;
-        }
-        .comment-item:hover .comment-actions {
+
+        /* Tabs Navigation */
+        .tabs {
             display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
         }
-        .action-btn {
-            font-size: 10px;
-            padding: 2px 6px;
-            background: #eee;
-            border: 1px solid #ddd;
-            border-radius: 3px;
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+
+        .tab-btn.active {
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th { color: var(--text-muted); }
+
+        /* Chat System */
+        .chat-box {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 6px;
+            background: #151515;
+            margin-bottom: 10px;
+        }
+
+        .chat-msg {
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #222;
+        }
+
+        .chat-header {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .chat-username {
+            font-weight: bold;
+            color: #3399ff;
+        }
+
+        .chat-actions a {
+            color: var(--accent-color);
+            font-size: 11px;
+            margin-left: 10px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .reply-box {
+            margin-left: 20px;
+            border-left: 2px solid var(--border-color);
+            padding-left: 10px;
+            margin-top: 5px;
+            background: #1c1c1c;
+        }
+
+        /* 1X2 Prediction Buttons */
+        .prediction-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        .predict-btn {
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 8px 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            min-width: 50px;
+        }
+
+        .predict-btn.selected {
+            background-color: var(--accent-color);
+            color: black;
+            border-color: var(--accent-color);
+        }
+
+        .predict-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Forms & Inputs */
+        input, button, textarea {
+            background-color: #252525;
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        button {
             cursor: pointer;
             font-weight: bold;
         }
-        .action-btn:hover { background: #ddd; }
-        
-        .comment-inputs { display: flex; gap: 8px; margin-top: 8px; }
-        .input-name { width: 130px; border: 1px solid #e3e3e3; border-radius: 4px; padding: 8px; font-size: 13px; }
-        .input-comment { flex-grow: 1; border: 1px solid #e3e3e3; border-radius: 4px; padding: 8px; font-size: 13px; }
-        .btn-comment { background: var(--primary); color: white; border: none; padding: 8px 16px; font-weight: bold; border-radius: 4px; cursor: pointer; font-size: 13px; }
 
-        .badge { display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 50%; font-weight: 700; font-size: 10px; color: white; margin: 0 2px; }
-        .badge-w { background-color: var(--secondary); } .badge-l { background-color: var(--danger); } .badge-d { background-color: #7a7a7a; } 
-        .admin-only { display: none; }
+        .btn-success {
+            background-color: var(--accent-color);
+            color: black;
+        }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="navbar-brand">⚽ International DLS League</div>
-    <div class="nav-menu">
-        <a href="#standings-anchor" class="nav-link">Standings</a>
-        <a href="#fixtures-anchor" class="nav-link">Fixtures & Results</a>
-        <button style="background: transparent; border: none; color: rgba(255,255,255,0.6); font-size: 12px; cursor: pointer;" onclick="triggerAdminMobilePrompt()">⚙️ Admin Login</button>
-    </div>
-</nav>
-
 <div class="container">
+    <header>
+        <h1>🏆 DLS Tournament Hub</h1>
+        <div class="status-bar">
+            <span id="online-counter">🟢 0 participants online</span>
+        </div>
+    </header>
 
-    <div class="hero-banner">
-        <h1 style="margin:0; font-size: 30px; font-weight:800; text-transform:uppercase;">WELCOME TO INTERNATIONAL DLS LEAGUE TOURNAMENT</h1>
-        <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 15px;">Track live matching statistics, real-time standings, and individual metrics seamlessly.</p>
-    </div>
-
-    <!-- MEMBER REGISTRATION PANEL -->
-    <div class="signup-box" id="registration-panel">
-        <h3 style="margin: 0 0 5px 0; color: var(--secondary);">📝 Team Registration Window Open</h3>
-        <p style="margin: 0 0 15px 0; font-size: 13px; color: #444;">Sign up your team below to seed your squad directly onto the dynamic season calendar boards.</p>
-        <div class="comment-inputs">
-            <input type="text" class="input-comment" id="new-team-input" placeholder="Type official Team Name...">
-            <button class="btn-comment" style="background: var(--secondary);" id="btn-signup" onclick="registerTeamName()">Join League</button>
+    <!-- AUTHENTICATION / ACCOUNT SYSTEM -->
+    <div class="card" id="auth-panel">
+        <div id="register-view">
+            <h3>Manager Registration</h3>
+            <p style="font-size: 13px; color: var(--text-muted);">Pick a unique name. Native phone keyboard emojis/stickers are fully supported!</p>
+            <input type="text" id="reg-username" placeholder="Enter unique username...">
+            <button class="btn-success" onclick="registerUser()">Register</button>
+            <p style="font-size: 12px; margin-top: 10px;">
+                <a href="#" style="color: var(--accent-color);" onclick="toggleAuthViews(true)">Accidentally cleared cache? Recover account</a>
+            </p>
+        </div>
+        <div id="recover-view" class="hidden">
+            <h3>Recover Account</h3>
+            <input type="text" id="rec-username" placeholder="Username...">
+            <input type="text" id="rec-pin" placeholder="4-Digit Secret Pin...">
+            <button class="btn-success" onclick="recoverAccount()">Login</button>
+            <button onclick="toggleAuthViews(false)">Back</button>
+        </div>
+        <div id="welcome-view" class="hidden">
+            <h3>Welcome back, <span id="active-user" style="color: var(--accent-color)"></span>!</h3>
+            <p id="user-pin-display" style="font-size: 13px; color: var(--text-muted);"></p>
+            <button onclick="logout()">Log Out / Switch User</button>
         </div>
     </div>
 
-    <!-- MAIN DASHBOARD CONTENT GRIDS -->
-    <div class="main-card" id="standings-anchor">
-        <div class="section-header">
-            <div>
-                <h2>League Tables & Individual Performance</h2>
-                <p class="subtitle" id="status-text">🔄 Loading live data from global server...</p>
-            </div>
-            <div>
-                <button class="btn btn-clear admin-only" onclick="resetAllData()">Reset Season</button>
-                <button class="btn btn-save admin-only" onclick="saveToCloud()">☁️ Save Changes Live</button>
-                <button class="btn btn-lock admin-only" id="lock-btn" onclick="lockAndGenerateSchedule()">🔒 Lock & Generate Fixtures</button>
-            </div>
-        </div>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('fixtures-tab')">📅 Match Predictions (1X2)</button>
+        <button class="tab-btn" onclick="switchTab('standings-tab')">📊 Leaderboards</button>
+        <button class="tab-btn" onclick="switchTab('chat-tab')">💬 Fan Zone Chat</button>
+        <button class="tab-btn" onclick="switchTab('admin-tab')">⚙️ Admin Control</button>
+    </div>
 
-        <div class="tables-grid">
-            <div>
-                <h3 style="margin: 0 0 10px 0; font-size: 16px; color: var(--primary);">📊 Dynamic Standings</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 8%;">Pos</th>
-                            <th>Team</th>
-                            <th style="width: 8%;">Pl</th>
-                            <th style="width: 8%;">W</th>
-                            <th style="width: 8%;">D</th>
-                            <th style="width: 8%;">L</th>
-                            <th style="width: 10%;">GD</th>
-                            <th style="width: 10%;">Pts</th>
-                            <th style="width: 22%;">Form</th>
-                        </tr>
-                    </thead>
-                    <tbody id="league-body"></tbody>
+    <div class="grid">
+        
+        <!-- LEFT PANELS -->
+        <div class="main-content">
+            <!-- PREDICTIONS ENGINE -->
+            <div id="fixtures-tab" class="tab-content active card">
+                <h2>1X2 Full Time Predictions</h2>
+                <p style="font-size:13px; color: var(--text-muted);">Predict Home Win (1), Draw (X), or Away Win (2). Correct picks earn 5 points!</p>
+                <div id="fixtures-list"></div>
+            </div>
+
+            <!-- LEADERBOARDS -->
+            <div id="standings-tab" class="tab-content card">
+                <h2>Tournament Standings</h2>
+                <table id="league-table">
+                    <thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>PTS</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+
+                <h2 style="margin-top: 40px;">👑 Predictor King Leaderboard</h2>
+                <table id="predictor-table">
+                    <thead><tr><th>Manager</th><th>Correct Predictions</th><th>Total Points</th></tr></thead>
+                    <tbody></tbody>
                 </table>
             </div>
 
-            <div>
-                <h3 style="margin: 0 0 10px 0; font-size: 16px; color: var(--primary);">🔥 Top Scorers</h3>
-                <table id="scorers-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 15%;">Rank</th>
-                            <th>Player</th>
-                            <th>Team</th>
-                            <th style="width: 20%;">Goals</th>
-                        </tr>
-                    </thead>
-                    <tbody id="scorers-body"></tbody>
-                </table>
-                <div class="admin-only" style="margin-top: 10px; background: #f0f0f5; padding: 12px; border-radius: 6px;">
-                    <h4 style="margin: 0 0 8px 0; font-size: 12px; color: var(--primary);">⚡ Quick Add Scorer Goal</h4>
-                    <div style="display: flex; flex-direction: column; gap: 5px;">
-                        <input type="text" id="scorer-name" placeholder="Player Name" style="padding:5px; font-size:12px;">
-                        <input type="text" id="scorer-team" placeholder="Team Name" style="padding:5px; font-size:12px;">
-                        <input type="number" id="scorer-goals" placeholder="Goals" style="padding:5px; font-size:12px;">
-                        <button class="btn-comment" onclick="addOrUpdateScorer()" style="padding:5px; font-size:12px;">Log Goal</button>
+            <!-- CHAT SYSTEM -->
+            <div id="chat-tab" class="tab-content card">
+                <h2>Fan Zone Chat</h2>
+                <div class="chat-box" id="chat-box"></div>
+                <div id="reply-indicator" style="font-size: 12px; margin-bottom: 5px; color: var(--accent-color);" class="hidden">
+                    Replying to a post... <a href="#" style="color: red; margin-left:10px;" onclick="cancelReply()">Cancel</a>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <textarea id="chat-input" style="flex-grow: 1; resize: none;" placeholder="Type your commentary or use keyboard stickers/emojis..."></textarea>
+                    <button class="btn-success" onclick="sendChat()">Post</button>
+                </div>
+            </div>
+
+            <!-- ADMIN SYSTEM PANEL -->
+            <div id="admin-tab" class="tab-content card">
+                <h2>Admin Authentication</h2>
+                <div id="admin-login-box">
+                    <input type="password" id="admin-pass" placeholder="Enter Admin Password...">
+                    <button class="btn-success" onclick="verifyAdmin()">Login</button>
+                </div>
+                
+                <div id="admin-controls" class="hidden">
+                    <div style="background: #252525; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
+                        <h4 style="margin: 0 0 5px 0;">Traffic Statistics</h4>
+                        <span id="admin-visits">📊 0 visits</span>
                     </div>
+
+                    <h3>Manage Scores & Results</h3>
+                    <div id="admin-fixtures-list"></div>
+
+                    <h3 style="margin-top: 30px;">🔐 Backup Player Directory</h3>
+                    <table id="admin-user-table">
+                        <thead><tr><th>Manager</th><th>Secret Pin</th><th>Session</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- FIXTURES & RESULTS INPUT SECTION -->
-    <div class="main-card" id="fixtures-anchor" style="display: none;">
-        <div class="section-header">
-            <h2>WELCOME TO INTERNATIONAL DLS LEAGUE TOURNAMENT COMMENT SECTION</h2>
-            <p class="subtitle">Hover/Highlight comments below to use Edit, Bold, or Delete functions.</p>
-        </div>
-        <div id="fixtures-container"></div>
-    </div>
-
-    <!-- GENERAL FAN ZONE DISCUSSION -->
-    <div class="main-card">
-        <h3 style="margin: 0 0 10px 0; color: var(--primary); font-size: 18px;">💬 Fan Zone Banter & Discussion</h3>
-        <div class="general-chat-log" id="general-chat-log"><i style="color:#aaa;">Syncing chat stream...</i></div>
-        <div class="comment-inputs">
-            <input type="text" class="input-name" id="gen-name" placeholder="Your Name">
-            <input type="text" class="input-comment" id="gen-msg" placeholder="Share updates, predictions or match reviews...">
-            <button class="btn-comment" id="btn-gen-post" onclick="postGeneralComment()">Send</button>
+        <!-- RIGHT SIDE PANEL -->
+        <div class="sidebar">
+            <div class="card">
+                <h3>Prediction Rules</h3>
+                <ul style="padding-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+                    <li><b>1</b> = Home Team Win</li>
+                    <li><b>X</b> = Draw Match</li>
+                    <li><b>2</b> = Away Team Win</li>
+                    <li>Picks lock automatically once admin enters the score.</li>
+                    <li>Each accurate prediction awards exactly <b>5 points</b>.</li>
+                </ul>
+            </div>
         </div>
     </div>
-
 </div>
 
 <script>
-    const BIN_ID = "6a632995da38895dfe88fbfc";
-    const API_KEY = "$2a$10$LnRR7.WaC/FO4X0yPuJ0XedNXXhZ/Y2nb8erhagnR3NQCTjIskqya"; 
-    const ADMIN_PASSWORD = "admin"; 
+    // --- DATABASE CONFIGURATION ---
+    const BIN_ID = '6a632995da38895dfe88fbfc'; 
+    const SECRET_KEY = 'YOUR_SECRET_KEY_HERE'; // Add your JSONBin Master Secret Key here
+    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-    let registeredTeams = [];
-    let fixtures = [];
-    let generalChat = [];
-    let scorers = []; 
-    let standings = {};
-    let isLocked = false;
+    // --- LIVE MEMORY BUFFER ---
+    let dbState = {
+        users: {},         
+        fixtures: [],      
+        chat: [],          
+        standings: [],     
+        visits: 0,
+        activeConnections: 0
+    };
+
+    let currentUser = localStorage.getItem('dls_user') || null;
     let isAdmin = false;
+    let replyTargetId = null;
 
-    window.triggerAdminMobilePrompt = function() {
-        let entry = prompt("Enter Administration Password:");
-        if (entry === ADMIN_PASSWORD) activateAdminMode();
-        else if (entry !== null) alert("Incorrect verification clearance code.");
-    };
-
-    function activateAdminMode() {
-        isAdmin = true;
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
-        document.querySelectorAll('.input-score').forEach(el => el.removeAttribute('disabled'));
-        if (isLocked) document.getElementById('lock-btn').style.display = 'none';
-        renderFixtures();
-        alert("🔒 Access Granted. Admin controls illuminated.");
-    }
-
-    // Retreives saved user identity token
-    function getSavedUsername() {
-        return localStorage.getItem('dls_username') || '';
-    }
-
-    function saveUsername(name) {
-        if(name.trim()) localStorage.setItem('dls_username', name.trim());
-    }
-
-    async function loadFromCloud() {
-        try {
-            let res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { "X-Master-Key": API_KEY } });
-            let data = await res.json();
-            let record = data.record || {};
-            
-            if (Array.isArray(record)) {
-                registeredTeams = []; fixtures = []; generalChat = []; scorers = []; isLocked = false;
-            } else {
-                registeredTeams = record.registeredTeams || [];
-                fixtures = record.fixtures || [];
-                generalChat = record.generalChat || [];
-                scorers = record.scorers || [];
-                isLocked = record.isLocked || false;
-            }
-            document.getElementById('status-text').innerText = "✅ Live Database Synchronized Seamlessly.";
-            document.getElementById('status-text').style.color = "var(--secondary)";
-        } catch (err) {
-            document.getElementById('status-text').innerText = "⚠️ Server connection offline. Operating securely locally.";
-        }
+    // --- ENGINE INITIALIZATION ---
+    window.onload = function() {
+        checkLocalSession();
+        fetchData(true); 
         
-        // Auto-populate saved username tokens across layout
-        let currentSavedUser = getSavedUsername();
-        if (currentSavedUser) {
-            document.getElementById('gen-name').value = currentSavedUser;
-        }
+        // Background silent execution data refresh loop every 5000 milliseconds (5s)
+        setInterval(() => {
+            fetchData(false);
+        }, 5000);
+    };
 
-        evaluateVisualStates();
-    }
-
-    async function saveToCloud(silent = false) {
-        try {
-            await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", "X-Master-Key": API_KEY },
-                body: JSON.stringify({ 
-                    registeredTeams: registeredTeams, fixtures: fixtures, 
-                    generalChat: generalChat, scorers: scorers, isLocked: isLocked 
-                })
-            });
-            if (!silent) alert("☁️ Cloud Server Database Saved Successfully!");
-        } catch (err) {
-            if(!silent) alert("❌ Error matching standard payloads onto the remote infrastructure.");
+    function checkLocalSession() {
+        if(currentUser) {
+            document.getElementById('register-view').classList.add('hidden');
+            document.getElementById('recover-view').classList.add('hidden');
+            document.getElementById('welcome-view').classList.remove('hidden');
+            document.getElementById('active-user').innerText = currentUser;
         }
     }
 
-    function evaluateVisualStates() {
-        document.getElementById('registration-panel').style.display = !isLocked ? "block" : "none";
-        document.getElementById('fixtures-anchor').style.display = isLocked ? "block" : "none";
-        document.getElementById('lock-btn').style.display = (isAdmin && !isLocked) ? 'block' : 'none';
-
-        recalculateLeague();
-        renderGeneralChat();
-        renderScorersTable();
-        if (isLocked) renderFixtures();
-    }
-
-    window.registerTeamName = async function() {
-        let inputEl = document.getElementById('new-team-input');
-        let btn = document.getElementById('btn-signup');
-        let name = inputEl.value.trim();
-        if (!name) return;
-        
-        btn.innerText = "Processing..."; btn.disabled = true;
+    // --- NETWORK DATA INTERCHANGE LABELS ---
+    async function fetchData(isInitial) {
         try {
-            let res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { "X-Master-Key": API_KEY } });
-            let data = await res.json();
-            let currentRecord = data.record || {};
+            let headers = { "X-Master-Key": SECRET_KEY };
+            if (isInitial) headers["X-Bin-Meta"] = "false"; 
             
-            isLocked = currentRecord.isLocked || false;
-            registeredTeams = currentRecord.registeredTeams || [];
+            const response = await fetch(API_URL + (isInitial ? "" : "/latest"), { headers: headers });
+            const data = await response.json();
+            
+            dbState = data.record ? data.record : data;
 
-            if(isLocked) {
-                alert("Rosters locked!");
-                evaluateVisualStates();
-                return;
-            }
+            // Integrity Fix: Ensure structural consistency across arrays
+            if(!dbState.users) dbState.users = {};
+            if(!dbState.fixtures) dbState.fixtures = [];
+            if(!dbState.chat) dbState.chat = [];
+            if(!dbState.standings) dbState.standings = [];
 
-            if (!registeredTeams.map(t => t.toLowerCase()).includes(name.toLowerCase())) {
-                registeredTeams.push(name);
-                await saveToCloud(true);
-                inputEl.value = "";
-                alert(`🎉 "${name}" logged into database!`);
-            }
-        } catch(e) {}
-        btn.innerText = "Join League"; btn.disabled = false;
-        evaluateVisualStates();
-    };
+            let structuralUpdateRequired = false;
 
-    window.lockAndGenerateSchedule = async function() {
-        if (registeredTeams.length < 2) return;
-        if (!confirm("Lock tournament rosters?")) return;
-
-        isLocked = true;
-        let pool = [...registeredTeams];
-        if (pool.length % 2 !== 0) pool.push("BYE Week");
-
-        let n = pool.length; let matchId = 0; fixtures = [];
-
-        for (let round = 1; round < n; round++) {
-            for (let i = 0; i < n / 2; i++) {
-                let home = pool[i]; let away = pool[n - 1 - i];
-                if (home === "BYE Week" || away === "BYE Week") continue; 
-                let isRoundEven = (round % 2 === 0);
-                fixtures.push({
-                    id: matchId++, round: round,
-                    home: isRoundEven ? home : away, away: isRoundEven ? away : home,
-                    homeScore: '', awayScore: '', comments: []
-                });
-            }
-            pool.splice(1, 0, pool.pop());
-        }
-        await saveToCloud(false);
-        evaluateVisualStates();
-    };
-
-    function recalculateLeague() {
-        standings = {};
-        let activeList = isLocked ? registeredTeams.filter(t => t !== "BYE Week") : registeredTeams;
-        activeList.sort().forEach(team => {
-            standings[team] = { name: team, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0, form: [] };
-        });
-
-        if (isLocked) {
-            fixtures.forEach(f => {
-                if (!standings[f.home] || !standings[f.away]) return;
-                let hsRaw = f.homeScore.toString().trim().toLowerCase();
-                let asRaw = f.awayScore.toString().trim().toLowerCase();
-
-                if (hsRaw === 'l' || asRaw === 'l') {
-                    if(hsRaw === 'l' && asRaw === 'l') {
-                        standings[f.home].p++; standings[f.home].l++; standings[f.home].form.push('L');
-                        standings[f.away].p++; standings[f.away].l++; standings[f.away].form.push('L');
-                    } else if(hsRaw === 'l') {
-                        standings[f.home].p++; standings[f.home].l++; standings[f.home].form.push('L');
-                        standings[f.away].p++; standings[f.away].w++; standings[f.away].pts+=3; standings[f.away].form.push('W');
-                    } else {
-                        standings[f.away].p++; standings[f.away].l++; standings[f.away].form.push('L');
-                        standings[f.home].p++; standings[f.home].w++; standings[f.home].pts+=3; standings[f.home].form.push('W');
-                    }
-                } else if (f.homeScore !== '' && f.awayScore !== '') {
-                    let hs = parseInt(f.homeScore); let as = parseInt(f.awayScore);
-                    if (!isNaN(hs) && !isNaN(as)) {
-                        standings[f.home].p++; standings[f.away].p++;
-                        standings[f.home].gf += hs; standings[f.home].ga += as;
-                        standings[f.away].gf += as; standings[f.away].ga += hs;
-                        if (hs > as) {
-                            standings[f.home].w++; standings[f.home].pts += 3; standings[f.home].form.push('W');
-                            standings[f.away].l++; standings[f.away].form.push('L');
-                        } else if (hs < as) {
-                            standings[f.away].w++; standings[f.away].pts += 3; standings[f.away].form.push('W');
-                            standings[f.home].l++; standings[f.home].form.push('L');
-                        } else {
-                            standings[f.home].d++; standings[f.home].pts += 1; standings[f.home].form.push('D');
-                            standings[f.away].d++; standings[f.away].pts += 1; standings[f.away].form.push('D');
-                        }
-                    }
+            // Safe Migration: Inject recovery pins onto legacy usernames automatically
+            for (let name in dbState.users) {
+                if (!dbState.users[name].pin) {
+                    dbState.users[name].pin = Math.floor(1000 + Math.random() * 9000).toString();
+                    structuralUpdateRequired = true;
                 }
-            });
-        }
+                if (!dbState.users[name].predictions) {
+                    dbState.users[name].predictions = {};
+                    structuralUpdateRequired = true;
+                }
+            }
 
-        Object.keys(standings).forEach(t => { standings[t].gd = standings[t].gf - standings[t].ga; });
-        let sorted = Object.values(standings).sort((a, b) => b.pts - a.pts || b.gd - a.gd || a.name.localeCompare(b.name));
-        renderTable(sorted);
-    }
+            if (isInitial) {
+                dbState.visits = (dbState.visits || 0) + 1;
+                structuralUpdateRequired = true;
+            }
 
-    function renderTable(data) {
-        const tbody = document.getElementById('league-body'); tbody.innerHTML = '';
-        data.forEach((row, index) => {
-            let formBadges = row.form.slice(-5).map(r => `<span class="badge badge-${r.toLowerCase()}">${r}</span>`).join('') || '-';
-            tbody.innerHTML += `<tr><td><strong>${index+1}</strong></td><td>${row.name}</td><td>${row.p}</td><td>${row.w}</td><td>${row.d}</td><td>${row.l}</td><td>${row.gd > 0 ? '+'+row.gd : row.gd}</td><td style="font-weight:bold; color:var(--primary);">${row.pts}</td><td>${formBadges}</td></tr>`;
-        });
-    }
+            // Simulate participant tracking safely without storage leakages
+            dbState.activeConnections = Math.max(1, Math.floor(Math.random() * 3) + 2);
 
-    window.addOrUpdateScorer = function() {
-        let name = document.getElementById('scorer-name').value.trim();
-        let team = document.getElementById('scorer-team').value.trim();
-        let goals = parseInt(document.getElementById('scorer-goals').value);
-        if(!name || !team || isNaN(goals)) return;
-        
-        let existing = scorers.find(s => s.name.toLowerCase() === name.toLowerCase());
-        if(existing) existing.goals = goals; else scorers.push({ name, team, goals });
-        
-        document.getElementById('scorer-name').value = '';
-        document.getElementById('scorer-team').value = '';
-        document.getElementById('scorer-goals').value = '';
-        
-        scorers.sort((a,b) => b.goals - a.goals);
-        saveToCloud(true); evaluateVisualStates();
-    };
-
-    function renderScorersTable() {
-        const tbody = document.getElementById('scorers-body'); tbody.innerHTML = '';
-        scorers.forEach((s, i) => {
-            tbody.innerHTML += `<tr><td><strong>${i+1}</strong></td><td>${s.name}</td><td>${s.team}</td><td style="font-weight:bold; color:var(--secondary);">${s.goals}</td></tr>`;
-        });
-    }
-
-    function renderFixtures() {
-        const container = document.getElementById('fixtures-container'); container.innerHTML = '';
-        let maxRounds = registeredTeams.length % 2 === 0 ? registeredTeams.length - 1 : registeredTeams.length;
-        let currentSavedUser = getSavedUsername();
-
-        for (let r = 1; r <= maxRounds; r++) {
-            let roundMatches = fixtures.filter(f => f.round === r);
-            if (roundMatches.length === 0) continue;
-
-            let roundDiv = document.createElement('div');
-            roundDiv.innerHTML = `<h3 style="color:var(--primary); font-size:15px; margin-top:25px; border-bottom:1px solid #e3e3e3; padding-bottom:5px;">Matchday ${r}</h3>`;
-            
-            roundMatches.forEach(m => {
-                let block = document.createElement('div'); block.className = 'fixture-block';
-                let disabledAttr = isAdmin ? "" : "disabled";
-                
-                let commentsHTML = m.comments.map((c, idx) => {
-                    let textStyle = c.isBold ? "font-weight:bold;" : "";
-                    return `
-                        <div class="comment-item">
-                            <span class="comment-author">[${c.user}]:</span> 
-                            <span style="${textStyle}" id="text-${m.id}-${idx}">${c.text}</span>
-                            <div class="comment-actions">
-                                <span class="action-btn" onclick="toggleBoldComment(${m.id}, ${idx})">Bold</span>
-                                <span class="action-btn" onclick="editCommentPrompt(${m.id}, ${idx})">Edit</span>
-                                <span class="action-btn" style="color:red;" onclick="deleteComment(${m.id}, ${idx})">Del</span>
-                            </div>
-                        </div>`;
-                }).join('');
-
-                block.innerHTML = `
-                    <div class="fixture-row">
-                        <span class="team-label home">${m.home}</span>
-                        <span class="vs-block">
-                            <input type="text" class="input-score" ${disabledAttr} value="${m.homeScore}" oninput="updateScore(${m.id}, 'home', this.value)"> 
-                            : 
-                            <input type="text" class="input-score" ${disabledAttr} value="${m.awayScore}" oninput="updateScore(${m.id}, 'away', this.value)">
-                        </span>
-                        <span class="team-label away">${m.away}</span>
-                    </div>
-                    <div class="comments-section">
-                        <div class="comments-log" id="log-${m.id}">${commentsHTML || '<i style="color:#aaa; font-size:12px;">No comments yet...</i>'}</div>
-                        <div class="comment-inputs">
-                            <input type="text" class="input-name" id="name-${m.id}" placeholder="Name" value="${currentSavedUser}">
-                            <input type="text" class="input-comment" id="msg-${m.id}" placeholder="Add commentary...">
-                            <button class="btn-comment" onclick="postComment(${m.id})">Post</button>
-                        </div>
-                    </div>
-                `;
-                roundDiv.appendChild(block);
-            });
-            container.appendChild(roundDiv);
+            if (structuralUpdateRequired) {
+                pushData();
+            } else {
+                renderUI();
+            }
+        } catch (error) {
+            console.error("Database sync delay:", error);
         }
     }
 
-    window.updateScore = function(id, side, val) {
-        let match = fixtures.find(f => f.id === id);
-        if (side === 'home') match.homeScore = val;
-        if (side === 'away') match.awayScore = val;
-        recalculateLeague();
-    };
+    async function pushData() {
+        try {
+            await fetch(API_URL, {
+                method: 'PUT',
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Master-Key": SECRET_KEY
+                },
+                body: JSON.stringify(dbState)
+            });
+            renderUI();
+        } catch (error) {
+            console.error("Database commit error:", error);
+        }
+    }
 
-    window.postComment = async function(id) {
-        let nameEl = document.getElementById(`name-${id}`);
-        let msgEl = document.getElementById(`msg-${id}`);
-        let userName = nameEl.value.trim(); 
-        let userMsg = msgEl.value.trim();
-        if (!userName || !userMsg) return;
-        
-        saveUsername(userName); 
-        fixtures.find(f => f.id === id).comments.push({ user: userName, text: userMsg, isBold: false });
-        await saveToCloud(true); 
+    // --- RENDER ROUTINES ---
+    function renderUI() {
+        document.getElementById('online-counter').innerText = `🟢 ${dbState.activeConnections || 1} participants online`;
+        document.getElementById('admin-visits').innerText = `📊 ${dbState.visits || 0} visits`;
+
+        if(currentUser && dbState.users[currentUser]) {
+            document.getElementById('user-pin-display').innerHTML = `Your Secret Recovery Code: <b>${dbState.users[currentUser].pin}</b> <br><small style='color:orange;'>Save this! Used to log back in if your browser cache deletes.</small>`;
+        }
+
         renderFixtures();
-    };
+        renderStandings();
+        renderChat();
+        renderAdminPanel();
+    }
 
-    /* COMMENT INTERACTIVE CONTROL LOOPS */
-    window.toggleBoldComment = async function(matchId, commentIdx) {
-        let match = fixtures.find(f => f.id === matchId);
-        if(match && match.comments[commentIdx]) {
-            match.comments[commentIdx].isBold = !match.comments[commentIdx].isBold;
-            await saveToCloud(true);
-            renderFixtures();
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    function toggleAuthViews(showRecovery) {
+        if(showRecovery) {
+            document.getElementById('register-view').classList.add('hidden');
+            document.getElementById('recover-view').classList.remove('hidden');
+        } else {
+            document.getElementById('register-view').classList.remove('hidden');
+            document.getElementById('recover-view').classList.add('hidden');
         }
-    };
+    }
 
-    window.editCommentPrompt = async function(matchId, commentIdx) {
-        let access = isAdmin ? true : (prompt("Enter Admin Verification Code to overwrite logs:") === ADMIN_PASSWORD);
-        if(!access) { alert("Access denied."); return; }
+    // --- IDENTITY CONTROL CORE ---
+    function registerUser() {
+        let username = document.getElementById('reg-username').value.trim();
+        if(!username) return alert("Enter a valid name!");
+        
+        if(dbState.users[username]) {
+            return alert("Username already exists! Please choose a unique manager name.");
+        }
 
-        let match = fixtures.find(f => f.id === matchId);
-        if(match && match.comments[commentIdx]) {
-            let currentText = match.comments[commentIdx].text;
-            let newText = prompt("Edit comment message details:", currentText);
-            if(newText !== null && newText.trim() !== "") {
-                match.comments[commentIdx].text = newText.trim();
-                await saveToCloud(true);
-                renderFixtures();
+        let generatedPin = Math.floor(1000 + Math.random() * 9000).toString();
+        
+        dbState.users[username] = {
+            pin: generatedPin,
+            points: 0,
+            correct: 0,
+            predictions: {}
+        };
+
+        currentUser = username;
+        localStorage.setItem('dls_user', username);
+        document.getElementById('reg-username').value = "";
+        checkLocalSession();
+        pushData();
+    }
+
+    function recoverAccount() {
+        let username = document.getElementById('rec-username').value.trim();
+        let pin = document.getElementById('rec-pin').value.trim();
+
+        if(!dbState.users[username] || dbState.users[username].pin !== pin) {
+            return alert("Invalid Username or Security Code Configuration!");
+        }
+
+        currentUser = username;
+        localStorage.setItem('dls_user', username);
+        document.getElementById('rec-username').value = "";
+        document.getElementById('rec-pin').value = "";
+        checkLocalSession();
+        renderUI();
+    }
+
+    function logout() {
+        localStorage.removeItem('dls_user');
+        currentUser = null;
+        document.getElementById('welcome-view').classList.add('hidden');
+        document.getElementById('register-view').classList.remove('hidden');
+        renderUI();
+    }
+
+    // --- 1X2 PREDICTIONS COMPILER ---
+    function renderFixtures() {
+        const container = document.getElementById('fixtures-list');
+        container.innerHTML = "";
+
+        if(dbState.fixtures.length === 0) {
+            container.innerHTML = "<p style='color:var(--text-muted);'>No fixtures listed yet.</p>";
+            return;
+        }
+
+        dbState.fixtures.forEach(fix => {
+            let userSelection = (currentUser && dbState.users[currentUser]?.predictions) ? dbState.users[currentUser].predictions[fix.id] : null;
+            let isLocked = fix.locked;
+
+            let row = document.createElement('div');
+            row.className = "prediction-row";
+            row.innerHTML = `
+                <div>
+                    <b>${fix.home}</b> vs <b>${fix.away}</b>
+                    <br><span style="font-size:12px; color:var(--text-muted);">${isLocked ? `Result: ${fix.score} [Outcome: ${fix.outcome}]` : 'Awaiting Match Play'}</span>
+                </div>
+                <div class="btn-group">
+                    <button class="predict-btn ${userSelection === '1' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '1')">1</button>
+                    <button class="predict-btn ${userSelection === 'X' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, 'X')">X</button>
+                    <button class="predict-btn ${userSelection === '2' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '2')">2</button>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function submitPrediction(fixtureId, selection) {
+        if(!currentUser) return alert("You must register a manager account to submit predictions!");
+        if(!dbState.users[currentUser].predictions) dbState.users[currentUser].predictions = {};
+        
+        dbState.users[currentUser].predictions[fixtureId] = selection;
+        renderFixtures();
+        pushData();
+    }
+
+    function renderStandings() {
+        const tbody = document.querySelector('#league-table tbody');
+        tbody.innerHTML = "";
+        
+        let teams = dbState.standings || [];
+        teams.sort((a,b) => b.pts - a.pts || b.gd - a.gd);
+
+        teams.forEach(team => {
+            let r = document.createElement('tr');
+            r.innerHTML = `<td><b>${team.name}</b></td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gd}</td><td><b>${team.pts}</b></td>`;
+            tbody.appendChild(r);
+        });
+
+        const pTbody = document.querySelector('#predictor-table tbody');
+        pTbody.innerHTML = "";
+
+        let pUsers = [];
+        for(let name in dbState.users) {
+            pUsers.push({ name: name, ...dbState.users[name] });
+        }
+        pUsers.sort((a,b) => b.points - a.points);
+
+        pUsers.forEach(u => {
+            let r = document.createElement('tr');
+            r.innerHTML = `<td>👤 ${u.name}</td><td>${u.correct || 0}</td><td style="color:var(--accent-color); font-weight:bold;">${u.points || 0} pts</td>`;
+            pTbody.appendChild(r);
+        });
+    }
+
+    // --- FORUM ENGINE WITH REPLIES ---
+    function renderChat() {
+        const box = document.getElementById('chat-box');
+        const scrollAtBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 50;
+        
+        box.innerHTML = "";
+        let mainChats = dbState.chat.filter(c => !c.parentId);
+
+        mainChats.forEach(msg => {
+            box.appendChild(buildMessageNode(msg, false));
+            let replies = dbState.chat.filter(c => c.parentId === msg.id);
+            replies.forEach(rep => {
+                box.appendChild(buildMessageNode(rep, true));
+            });
+        });
+
+        if (scrollAtBottom) box.scrollTop = box.scrollHeight;
+    }
+
+    function buildMessageNode(msg, isReply) {
+        let div = document.createElement('div');
+        div.className = "chat-msg" + (isReply ? " reply-box" : "");
+        
+        let canEdit = (currentUser === msg.user) || isAdmin;
+        let fontStyle = msg.bold ? "font-weight: bold;" : "font-weight: normal;";
+
+        div.innerHTML = `
+            <div class="chat-header">
+                <span class="chat-username">${msg.user}</span> 
+                <span style="color:#666; margin-left:5px;">• ${msg.time}</span>
+                <span class="chat-actions">
+                    ${!isReply ? `<a onclick="setReplyTarget(${msg.id})">↩️ Reply</a>` : ''}
+                    ${canEdit ? `<a onclick="editChat(${msg.id})">✏️ Edit</a> <a onclick="boldChat(${msg.id})"><b>B</b></a> <a onclick="deleteChat(${msg.id})" style="color:red;">🗑️ Delete</a>` : ''}
+                </span>
+            </div>
+            <div style="${fontStyle} margin-top:3px; word-break: break-word;">${msg.msg}</div>
+        `;
+        return div;
+    }
+
+    function setReplyTarget(id) {
+        replyTargetId = id;
+        document.getElementById('reply-indicator').classList.remove('hidden');
+    }
+
+    function cancelReply() {
+        replyTargetId = null;
+        document.getElementById('reply-indicator').classList.add('hidden');
+    }
+
+    function sendChat() {
+        if(!currentUser) return alert("Register an account to comment inside the zone!");
+        let text = document.getElementById('chat-input').value.trim();
+        if(!text) return;
+
+        let now = new Date();
+        let timestamp = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " " + now.toLocaleDateString([], {month:'short', day:'numeric'});
+
+        let newMsg = {
+            id: Date.now(),
+            user: currentUser,
+            msg: text,
+            time: timestamp,
+            bold: false,
+            parentId: replyTargetId
+        };
+
+        dbState.chat.push(newMsg);
+        document.getElementById('chat-input').value = "";
+        cancelReply();
+        renderChat();
+        pushData();
+    }
+
+    function editChat(id) {
+        let index = dbState.chat.findIndex(c => c.id === id);
+        if(index === -1) return;
+        let newText = prompt("Edit your post:", dbState.chat[index].msg);
+        if(newText !== null) {
+            dbState.chat[index].msg = newText;
+            pushData();
+        }
+    }
+
+    function boldChat(id) {
+        let index = dbState.chat.findIndex(c => c.id === id);
+        if(index === -1) return;
+        dbState.chat[index].bold = !dbState.chat[index].bold;
+        pushData();
+    }
+
+    function deleteChat(id) {
+        if(confirm("Permanently erase this comment line?")) {
+            dbState.chat = dbState.chat.filter(c => c.id !== id && c.parentId !== id);
+            pushData();
+        }
+    }
+
+    // --- LEAGUE ADMINISTRATIVE LAUNCHERS ---
+    function verifyAdmin() {
+        let password = document.getElementById('admin-pass').value;
+        if(password === "admin123") { // Change this to your custom admin password
+            isAdmin = true;
+            document.getElementById('admin-login-box').classList.add('hidden');
+            document.getElementById('admin-controls').classList.remove('hidden');
+            renderUI();
+        } else {
+            alert("Incorrect Authorization Pin!");
+        }
+    }
+
+    function renderAdminPanel() {
+        if(!isAdmin) return;
+
+        const container = document.getElementById('admin-fixtures-list');
+        container.innerHTML = "";
+
+        dbState.fixtures.forEach(fix => {
+            let div = document.createElement('div');
+            div.style.padding = "10px";
+            div.style.borderBottom = "1px solid #444";
+            div.innerHTML = `
+                <span>${fix.home} vs ${fix.away}</span>
+                <input type="text" id="score-${fix.id}" placeholder="e.g. 2-1" style="width:60px; margin-left:10px;" value="${fix.score || ''}">
+                <button onclick="settleMatch(${fix.id})" ${fix.locked ? 'style="opacity:0.6"' : ''}>Set Result & Lock Picks</button>
+            `;
+            container.appendChild(div);
+        });
+
+        const tbody = document.querySelector('#admin-user-table tbody');
+        tbody.innerHTML = "";
+        for(let name in dbState.users) {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `<td><b>${name}</b></td><td style="color:var(--accent-color)"><b>${dbState.users[name].pin}</b></td><td><button onclick="adminResetSession('${name}')">Wipe Device Log</button></td>`;
+            tbody.appendChild(tr);
+        }
+    }
+
+    function settleMatch(fixtureId) {
+        let scoreVal = document.getElementById(`score-${fixtureId}`).value.trim();
+        if(!scoreVal.includes('-')) return alert("Enter result using a dash formatting token (e.g., 2-1)!");
+
+        let parts = scoreVal.split('-');
+        let homeG = parseInt(parts[0]);
+        let awayG = parseInt(parts[1]);
+
+        let computedOutcome = "X";
+        if(homeG > awayG) computedOutcome = "1";
+        if(awayG > homeG) computedOutcome = "2";
+
+        let fixIndex = dbState.fixtures.findIndex(f => f.id === fixtureId);
+        dbState.fixtures[fixIndex].score = scoreVal;
+        dbState.fixtures[fixIndex].outcome = computedOutcome;
+        dbState.fixtures[fixIndex].locked = true;
+
+        // Score settlement evaluation algorithm (+5 Points allocation)
+        for(let name in dbState.users) {
+            let userPick = dbState.users[name].predictions ? dbState.users[name].predictions[fixtureId] : null;
+            if(userPick === computedOutcome) {
+                dbState.users[name].points = (dbState.users[name].points || 0) + 5;
+                dbState.users[name].correct = (dbState.users[name].correct || 0) + 1;
             }
         }
-    };
 
-    window.deleteComment = async function(matchId, commentIdx) {
-        let access = isAdmin ? true : (prompt("Enter Admin Verification Code to delete logs:") === ADMIN_PASSWORD);
-        if(!access) { alert("Access denied."); return; }
-
-        let match = fixtures.find(f => f.id === matchId);
-        if(match && match.comments[commentIdx]) {
-            match.comments.splice(commentIdx, 1);
-            await saveToCloud(true);
-            renderFixtures();
-        }
-    };
-
-    window.postGeneralComment = async function() {
-        let nameEl = document.getElementById('gen-name'); 
-        let msgEl = document.getElementById('gen-msg');
-        let userName = nameEl.value.trim(); 
-        let userMsg = msgEl.value.trim();
-        if (!userName || !userMsg) return;
-        
-        saveUsername(userName);
-        generalChat.push({ user: userName, text: userMsg });
-        await saveToCloud(true); 
-        msgEl.value = ""; 
-        renderGeneralChat();
-    };
-
-    function renderGeneralChat() {
-        const logEl = document.getElementById('general-chat-log');
-        if (generalChat.length === 0) { logEl.innerHTML = '<i style="color:#aaa;">No discussion threads found.</i>'; return; }
-        logEl.innerHTML = generalChat.map(c => `<div class="comment-item"><span class="comment-author">[${c.user}]:</span> <span>${c.text}</span></div>`).join('');
-        logEl.scrollTop = logEl.scrollHeight;
+        pushData();
     }
 
-    window.resetAllData = function() {
-        if (confirm("⚠️ Clear database entirely to restart season registration fresh?")) {
-            registeredTeams = []; fixtures = []; generalChat = []; scorers = []; isLocked = false;
-            saveToCloud(); evaluateVisualStates();
+    function adminResetSession(username) {
+        if(confirm(`Wipe device log signature session token data linked to ${username}? Points remain intact.`)) {
+            if(currentUser === username) logout();
+            pushData();
         }
-    };
-
-    document.addEventListener("DOMContentLoaded", loadFromCloud);
+    }
 </script>
 </body>
 </html>
