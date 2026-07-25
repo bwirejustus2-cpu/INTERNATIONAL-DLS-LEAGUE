@@ -186,14 +186,14 @@
         }
 
         .chat-username {
-            font-weight: bold;
-            color: var(--accent-blue);
+            font-weight: 800; /* Extra bold for usernames */
+            color: var(--accent-purple);
         }
 
         .chat-actions button {
             background: none;
             border: none;
-            color: var(--accent-purple);
+            color: var(--accent-blue);
             font-size: 11px;
             margin-left: 8px;
             cursor: pointer;
@@ -361,13 +361,13 @@
             <div id="standings-tab" class="tab-content card">
                 <h2>League Table</h2>
                 <table id="league-table">
-                    <thead><tr><th style="background:var(--accent-purple)">Team</th><th style="background:var(--accent-purple)">P</th><th style="background:var(--accent-purple)">W</th><th style="background:var(--accent-purple)">D</th><th style="background:var(--accent-purple)">L</th><th style="background:var(--accent-purple)">GD</th><th style="background:var(--accent-purple)">PTS</th></tr></thead>
+                    <thead><tr><th style="background:var(--accent-purple); width: 45px;">Pos</th><th style="background:var(--accent-purple)">Team</th><th style="background:var(--accent-purple)">P</th><th style="background:var(--accent-purple)">W</th><th style="background:var(--accent-purple)">D</th><th style="background:var(--accent-purple)">L</th><th style="background:var(--accent-purple)">GD</th><th style="background:var(--accent-purple)">PTS</th></tr></thead>
                     <tbody></tbody>
                 </table>
 
                 <h2 style="margin-top: 40px;">👑 Predictions Score</h2>
                 <table id="predictor-table">
-                    <thead><tr><th>Manager (Username)</th><th>Team Name</th><th>Correct Picks</th><th>Total Points</th></tr></thead>
+                    <thead><tr><th style="width: 45px;">Pos</th><th>Manager (Username)</th><th>Team Name</th><th>Correct Picks</th><th>Total Points</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -559,7 +559,7 @@
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
-        event.currentTarget.classList.add('active');
+        if(event) event.currentTarget.classList.add('active');
     }
 
     function toggleAuthViews(mode) {
@@ -666,6 +666,7 @@
     }
 
     function renderStandings() {
+        // 1. Process League Leaderboards
         const tbody = document.querySelector('#league-table tbody');
         tbody.innerHTML = "";
         
@@ -681,15 +682,24 @@
         }
 
         if (uniqueRegisteredTeams.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No registered clubs yet. Standings update live on registration!</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No registered clubs yet. Standings update live on registration!</td></tr>`;
         } else {
-            uniqueRegisteredTeams.forEach(team => {
+            uniqueRegisteredTeams.forEach((team, index) => {
                 let r = document.createElement('tr');
-                r.innerHTML = `<td><b>${team.name}</b></td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gd}</td><td style="color:var(--accent-blue)"><b>${team.pts}</b></td>`;
+                r.innerHTML = `
+                    <td style="font-weight: bold; color: var(--text-muted); text-align: center;">${index + 1}</td>
+                    <td><b>${team.name}</b></td>
+                    <td>${team.p}</td>
+                    <td>${team.w}</td>
+                    <td>${team.d}</td>
+                    <td>${team.l}</td>
+                    <td>${team.gd}</td>
+                    <td style="color:var(--accent-blue)"><b>${team.pts}</b></td>`;
                 tbody.appendChild(r);
             });
         }
 
+        // 2. Process Predictions Leaderboards
         const pTbody = document.querySelector('#predictor-table tbody');
         pTbody.innerHTML = "";
 
@@ -699,11 +709,20 @@
         }
         pUsers.sort((a,b) => b.points - a.points);
 
-        pUsers.forEach(u => {
-            let r = document.createElement('tr');
-            r.innerHTML = `<td>👤 <b>${u.name}</b></td><td><span style="color:var(--accent-orange); font-weight:bold;">${u.teamName || 'N/A'}</span></td><td>${u.correct || 0}</td><td style="color:var(--accent-green); font-weight:bold;">${u.points || 0} pts</td>`;
-            pTbody.appendChild(r);
-        });
+        if (pUsers.length === 0) {
+            pTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No registered managers yet.</td></tr>`;
+        } else {
+            pUsers.forEach((u, index) => {
+                let r = document.createElement('tr');
+                r.innerHTML = `
+                    <td style="font-weight: bold; color: var(--text-muted); text-align: center;">${index + 1}</td>
+                    <td>👤 <b>${u.name}</b></td>
+                    <td><span style="color:var(--accent-orange); font-weight:bold;">${u.teamName || 'N/A'}</span></td>
+                    <td>${u.correct || 0}</td>
+                    <td style="color:var(--accent-green); font-weight:bold;">${u.points || 0} pts</td>`;
+                pTbody.appendChild(r);
+            });
+        }
     }
 
     function renderChat() {
@@ -713,7 +732,6 @@
             let div = document.createElement('div');
             div.className = "chat-msg";
 
-            // Determine what contextual buttons are allowed
             let actionButtons = "";
             if (currentUser && msg.user === currentUser) {
                 actionButtons += `<button onclick="initiateEditChat(${msg.id}, '${escapeHtml(msg.msg)}')">📝 Edit</button>`;
@@ -722,10 +740,11 @@
                 actionButtons += `<button class="btn-delete-chat" onclick="deleteChatMessage(${msg.id})">❌ Delete</button>`;
             }
 
+            // Username is rendered in bold tags
             div.innerHTML = `
                 <div class="chat-header">
                     <div>
-                        <span class="chat-username">${msg.user}</span>
+                        <span class="chat-username"><b>${msg.user}</b></span>
                         ${msg.edited ? `<span style="font-size:10px; font-style:italic; color:var(--text-muted); margin-left:5px;">(edited)</span>` : ''}
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
@@ -749,7 +768,6 @@
         if(!text) return;
 
         if (editChatId !== null) {
-            // Update mode execution
             let messageObj = dbState.chat.find(m => m.id === editChatId);
             if (messageObj) {
                 messageObj.msg = text;
@@ -757,7 +775,6 @@
             }
             cancelEditMode();
         } else {
-            // Create mode execution
             let dateStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             let monthDay = new Date().toLocaleDateString([], {month: 'short', day: 'numeric'});
             dbState.chat.push({
