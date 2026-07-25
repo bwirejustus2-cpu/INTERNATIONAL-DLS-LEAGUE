@@ -182,11 +182,27 @@
             margin-bottom: 6px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
         }
 
         .chat-username {
             font-weight: bold;
             color: var(--accent-blue);
+        }
+
+        .chat-actions button {
+            background: none;
+            border: none;
+            color: var(--accent-purple);
+            font-size: 11px;
+            margin-left: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            padding: 2px 5px;
+        }
+
+        .chat-actions button.btn-delete-chat {
+            color: #ff3b3b;
         }
 
         .prediction-row {
@@ -360,9 +376,12 @@
                 <h2 style="margin-bottom: 15px;">Fan Zone Chat</h2>
                 <div class="chat-container-box">
                     <div class="chat-box" id="chat-box"></div>
+                    <div id="edit-indicator" style="font-size: 12px; margin-bottom: 8px; color: var(--accent-orange); font-weight: bold;" class="hidden">
+                        📝 Editing message... <a href="#" style="color: #ff3b3b; margin-left:10px; text-decoration:none;" onclick="cancelEditMode()">Cancel</a>
+                    </div>
                     <div style="display: flex; gap: 10px;">
                         <textarea id="chat-input" style="flex-grow: 1; resize: none; height: 40px; padding: 10px;" placeholder="Type a message..."></textarea>
-                        <button class="btn-success" style="background:var(--accent-blue); color:white;" onclick="sendChat()">Post</button>
+                        <button id="chat-submit-btn" class="btn-success" style="background:var(--accent-blue); color:white;" onclick="sendChat()">Post</button>
                     </div>
                 </div>
             </div>
@@ -435,6 +454,7 @@
     let currentUser = localStorage.getItem('dls_user') || null;
     let tempUsername = "";
     let isAdmin = false;
+    let editChatId = null;
 
     window.onload = function() {
         checkLocalSession();
@@ -692,9 +712,35 @@
         dbState.chat.forEach(msg => {
             let div = document.createElement('div');
             div.className = "chat-msg";
-            div.innerHTML = `<div class="chat-header"><span class="chat-username">${msg.user}</span><span>${msg.time}</span></div><div>${msg.msg}</div>`;
+
+            // Determine what contextual buttons are allowed
+            let actionButtons = "";
+            if (currentUser && msg.user === currentUser) {
+                actionButtons += `<button onclick="initiateEditChat(${msg.id}, '${escapeHtml(msg.msg)}')">📝 Edit</button>`;
+            }
+            if (isAdmin) {
+                actionButtons += `<button class="btn-delete-chat" onclick="deleteChatMessage(${msg.id})">❌ Delete</button>`;
+            }
+
+            div.innerHTML = `
+                <div class="chat-header">
+                    <div>
+                        <span class="chat-username">${msg.user}</span>
+                        ${msg.edited ? `<span style="font-size:10px; font-style:italic; color:var(--text-muted); margin-left:5px;">(edited)</span>` : ''}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span>${msg.time}</span>
+                        <div class="chat-actions">${actionButtons}</div>
+                    </div>
+                </div>
+                <div style="margin-top:5px; word-break: break-word;">${msg.msg}</div>
+            `;
             box.appendChild(div);
         });
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     }
 
     function sendChat() {
@@ -702,14 +748,50 @@
         let text = document.getElementById('chat-input').value.trim();
         if(!text) return;
 
-        dbState.chat.push({
-            id: Date.now(),
-            user: currentUser,
-            msg: text,
-            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-        });
+        if (editChatId !== null) {
+            // Update mode execution
+            let messageObj = dbState.chat.find(m => m.id === editChatId);
+            if (messageObj) {
+                messageObj.msg = text;
+                messageObj.edited = true;
+            }
+            cancelEditMode();
+        } else {
+            // Create mode execution
+            let dateStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            let monthDay = new Date().toLocaleDateString([], {month: 'short', day: 'numeric'});
+            dbState.chat.push({
+                id: Date.now(),
+                user: currentUser,
+                msg: text,
+                time: `${dateStr} ${monthDay}`
+            });
+        }
+        
         document.getElementById('chat-input').value = "";
         pushData();
+    }
+
+    function initiateEditChat(id, currentText) {
+        editChatId = id;
+        document.getElementById('chat-input').value = currentText;
+        document.getElementById('edit-indicator').classList.remove('hidden');
+        document.getElementById('chat-submit-btn').innerText = "Save Update";
+        document.getElementById('chat-input').focus();
+    }
+
+    function cancelEditMode() {
+        editChatId = null;
+        document.getElementById('chat-input').value = "";
+        document.getElementById('edit-indicator').classList.add('hidden');
+        document.getElementById('chat-submit-btn').innerText = "Post";
+    }
+
+    function deleteChatMessage(id) {
+        if(confirm("Permanently delete this fan message from database room?")) {
+            dbState.chat = dbState.chat.filter(m => m.id !== id);
+            pushData();
+        }
     }
 
     function verifyAdmin() {
@@ -758,7 +840,6 @@
     function renderAdminPanel() {
         if(!isAdmin) return;
         
-        // 1. Render Score settlement fields
         const container = document.getElementById('admin-fixtures-list');
         container.innerHTML = "";
         dbState.fixtures.forEach(fix => {
@@ -776,7 +857,6 @@
             container.appendChild(div);
         });
 
-        // 2. POPULATE THE BACKUP PLAYER DIRECTORY ROWS
         const userTbody = document.querySelector('#admin-user-table tbody');
         userTbody.innerHTML = "";
         
