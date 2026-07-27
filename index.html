@@ -245,6 +245,12 @@
             margin-bottom: 10px;
         }
 
+        .match-action-row {
+            margin-top: 5px;
+            margin-bottom: 12px;
+            text-align: right;
+        }
+
         .done-btn {
             background-color: #cbd5e1;
             color: var(--text-dark);
@@ -291,6 +297,16 @@
             justify-content: space-between;
         }
 
+        .matchday-header {
+            background: var(--accent-purple);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
         .btn-group {
             display: flex;
             gap: 8px;
@@ -326,7 +342,7 @@
             cursor: not-allowed;
         }
 
-        input[type="text"], input[type="password"], input[type="number"], textarea, select {
+        input[type="text"], input[type="password"], textarea, select {
             background-color: #ffffff;
             border: 2px solid #cbd5e1;
             color: var(--text-dark);
@@ -620,19 +636,12 @@
 
     async function fetchData(isInitial) {
         try {
-            let headers = { 
-                "X-Master-Key": SECRET_KEY,
-                "Content-Type": "application/json"
-            };
+            let headers = { "X-Master-Key": SECRET_KEY };
             if (isInitial) headers["X-Bin-Meta"] = "false"; 
             
             const response = await fetch(API_URL + (isInitial ? "" : "/latest"), { headers: headers });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
             const data = await response.json();
+            
             dbState = data.record ? data.record : data;
 
             if(!dbState.users) dbState.users = {};
@@ -692,7 +701,7 @@
                 renderUI();
             }
         } catch (error) {
-            console.error("Live loop active error:", error);
+            console.error("Live loop active...");
         }
     }
 
@@ -726,7 +735,6 @@
 
         if(currentUser && dbState.users[currentUser]) {
             const userObj = dbState.users[currentUser];
-            document.getElementById('active-user').innerText = currentUser;
             document.getElementById('active-team').innerText = userObj.isFan ? "Fan Room Mode" : (userObj.teamName || 'N/A');
             document.getElementById('active-role').innerText = userObj.isFan ? "📢 FAN" : "⚽ PARTICIPANT";
             document.getElementById('active-role').style.background = userObj.isFan ? "rgba(136, 0, 255, 0.1)" : "rgba(0, 119, 255, 0.1)";
@@ -810,539 +818,467 @@
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         
         document.getElementById(tabId).classList.add('active');
-        document.getElementById('btn-' + tabId).classList.add('active');
-
+        
+        const currentBtn = document.getElementById(`btn-${tabId}`);
+        if(currentBtn) currentBtn.classList.add('active');
+        
         if (tabId === 'chat-tab') {
             unreadChatCount = 0;
+            localChatCount = dbState.chat.length;
             const badgeEl = document.getElementById('chat-unread-badge');
-            badgeEl.classList.add('hidden');
-            badgeEl.innerText = '0';
+            if(badgeEl) badgeEl.classList.add('hidden');
             
-            const chatBox = document.getElementById('chat-box');
-            if (chatBox) {
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
+            setTimeout(() => {
+                const chatBox = document.getElementById('chat-box');
+                if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+            }, 50);
         }
     }
 
-    function toggleAuthViews(viewName) {
+    function toggleAuthViews(mode) {
         document.getElementById('register-username-view').classList.add('hidden');
         document.getElementById('register-team-view').classList.add('hidden');
         document.getElementById('recover-view').classList.add('hidden');
-        document.getElementById('welcome-view').classList.add('hidden');
-
-        if (viewName === 'register') {
-            document.getElementById('register-username-view').classList.remove('hidden');
-        } else if (viewName === 'team') {
-            document.getElementById('register-team-view').classList.remove('hidden');
-        } else if (viewName === 'recover') {
-            document.getElementById('recover-view').classList.remove('hidden');
-        } else if (viewName === 'welcome') {
-            document.getElementById('welcome-view').classList.remove('hidden');
-        }
+        if(mode === 'recover') document.getElementById('recover-view').classList.remove('hidden');
+        else document.getElementById('register-username-view').classList.remove('hidden');
     }
 
     function goToTeamRegistration() {
-        const inputVal = document.getElementById('reg-username').value.trim();
-        if (!inputVal) {
-            alert("Please enter a valid username!");
-            return;
-        }
-        if (dbState.users[inputVal]) {
-            alert("This username is already taken! Please choose another or recover your account.");
-            return;
-        }
-        tempUsername = inputVal;
-        document.getElementById('temp-username-display').innerText = tempUsername;
-        toggleAuthViews('team');
+        let username = document.getElementById('reg-username').value.trim();
+        if(!username) return alert("Enter a valid username!");
+        if(dbState.users[username]) return alert("Username already taken!");
+        tempUsername = username;
+        document.getElementById('temp-username-display').innerText = username;
+        document.getElementById('register-username-view').classList.add('hidden');
+        document.getElementById('register-team-view').classList.remove('hidden');
     }
 
     function registerAsFan() {
-        const inputVal = document.getElementById('reg-username').value.trim();
-        if (!inputVal) {
-            alert("Please enter a valid username!");
-            return;
-        }
-        if (dbState.users[inputVal]) {
-            alert("This username is already taken! Please choose another or recover your account.");
-            return;
-        }
+        let username = document.getElementById('reg-username').value.trim();
+        if(!username) return alert("Enter a valid username!");
+        if(dbState.users[username]) return alert("Username already taken!");
 
-        const pin = Math.floor(1000 + Math.random() * 9000).toString();
-        dbState.users[inputVal] = {
-            pin: pin,
+        dbState.users[username] = {
+            pin: Math.floor(1000 + Math.random() * 9000).toString(),
+            teamName: "",
             isFan: true,
-            teamName: "Fan Room",
+            points: 0,
+            correct: 0,
+            lastSeen: Date.now(),
             predictions: {},
-            predictionTimes: {},
-            lastSeen: Date.now()
+            predictionTimes: {}
         };
-
-        currentUser = inputVal;
-        localStorage.setItem('dls_user', currentUser);
+        currentUser = username;
+        localStorage.setItem('dls_user', username);
+        document.getElementById('reg-username').value = "";
+        checkLocalSession();
         pushData();
-        toggleAuthViews('welcome');
     }
 
     function completeRegistration() {
-        const teamInput = document.getElementById('reg-teamname').value.trim();
-        if (!teamInput) {
-            alert("Please enter your team name!");
-            return;
-        }
+        let teamName = document.getElementById('reg-teamname').value.trim();
+        if(!teamName) return alert("Please enter your team name!");
 
-        for (let u in dbState.users) {
-            if (!dbState.users[u].isFan && dbState.users[u].teamName && dbState.users[u].teamName.toLowerCase() === teamInput.toLowerCase()) {
-                alert("This team name is already registered by another participant!");
-                return;
-            }
-        }
-
-        const pin = Math.floor(1000 + Math.random() * 9000).toString();
         dbState.users[tempUsername] = {
-            pin: pin,
+            pin: Math.floor(1000 + Math.random() * 9000).toString(),
+            teamName: teamName,
             isFan: false,
-            teamName: teamInput,
+            points: 0,
+            correct: 0,
+            lastSeen: Date.now(),
             predictions: {},
-            predictionTimes: {},
-            lastSeen: Date.now()
+            predictionTimes: {}
         };
-
         currentUser = tempUsername;
-        localStorage.setItem('dls_user', currentUser);
+        localStorage.setItem('dls_user', tempUsername);
+        document.getElementById('reg-username').value = "";
+        document.getElementById('reg-teamname').value = "";
+        checkLocalSession();
         pushData();
-        toggleAuthViews('welcome');
     }
 
     function recoverAccount() {
-        const uName = document.getElementById('rec-username').value.trim();
-        const uPin = document.getElementById('rec-pin').value.trim();
-
-        if (!uName || !uPin) {
-            alert("Please fill in both fields.");
-            return;
-        }
-
-        if (dbState.users[uName] && dbState.users[uName].pin === uPin) {
-            currentUser = uName;
-            localStorage.setItem('dls_user', currentUser);
-            dbState.users[currentUser].lastSeen = Date.now();
-            pushData();
-            toggleAuthViews('welcome');
-        } else {
-            alert("Invalid username or secret PIN!");
-        }
-    }
-
-    function checkLocalSession() {
-        if (currentUser) {
-            toggleAuthViews('welcome');
-        } else {
-            toggleAuthViews('register');
-        }
+        let username = document.getElementById('rec-username').value.trim();
+        let pin = document.getElementById('rec-pin').value.trim();
+        if(!dbState.users[username] || dbState.users[username].pin !== pin) return alert("Invalid credentials!");
+        currentUser = username;
+        localStorage.setItem('dls_user', username);
+        dbState.users[currentUser].lastSeen = Date.now();
+        checkLocalSession();
+        pushData();
     }
 
     function logout() {
-        if (currentUser && dbState.users[currentUser]) {
-            dbState.users[currentUser].lastSeen = 0;
-            pushData();
-        }
-        currentUser = null;
+        if (currentUser && dbState.users[currentUser]) dbState.users[currentUser].lastSeen = 0;
         localStorage.removeItem('dls_user');
-        toggleAuthViews('register');
+        currentUser = null;
+        document.getElementById('welcome-view').classList.add('hidden');
+        document.getElementById('register-username-view').classList.remove('hidden');
+        pushData();
+    }
+
+    function checkLocalSession() {
+        if(currentUser) {
+            document.getElementById('register-username-view').classList.add('hidden');
+            document.getElementById('register-team-view').classList.add('hidden');
+            document.getElementById('recover-view').classList.add('hidden');
+            document.getElementById('welcome-view').classList.remove('hidden');
+            document.getElementById('active-user').innerText = currentUser;
+        }
     }
 
     function renderFixtures() {
-        const listContainer = document.getElementById('fixtures-list');
-        if (!listContainer) return;
+        const container = document.getElementById('fixtures-list');
+        container.innerHTML = "";
 
-        listContainer.innerHTML = "";
-        
-        const targetMatchday = globalUserMatchdayView;
-        const matchdayFixtures = dbState.fixtures.filter(f => (f.matchday || 1) === targetMatchday);
-
-        if (matchdayFixtures.length === 0) {
-            listContainer.innerHTML = `<p style="color:var(--text-muted); font-style:italic;">No fixtures generated for Matchday ${targetMatchday} yet.</p>`;
+        if(dbState.fixtures.length === 0) {
+            container.innerHTML = "<p style='color:var(--text-muted); font-style:italic;'>No match fixtures listed yet.</p>";
             return;
         }
 
-        matchdayFixtures.forEach((fixture) => {
-            const globalIndex = dbState.fixtures.indexOf(fixture);
+        const activeMatches = dbState.fixtures.filter(f => f.matchday === 0 || f.matchday === globalUserMatchdayView);
 
-            const homeTeam = fixture.home;
-            const awayTeam = fixture.away;
-            const isLocked = fixture.locked;
-            const isSettled = fixture.settled;
+        if (activeMatches.length === 0) {
+            container.innerHTML = `<p style='color:var(--text-muted); font-style:italic;'>No games scheduled for Matchday ${globalUserMatchdayView}.</p>`;
+            return;
+        }
 
-            let userPrediction = null;
-            let predictionTime = null;
+        let manualGroup = activeMatches.filter(f => f.matchday === 0);
+        let scheduledGroup = activeMatches.filter(f => f.matchday === globalUserMatchdayView);
 
-            if (currentUser && dbState.users[currentUser]) {
-                if (dbState.users[currentUser].predictions) {
-                    userPrediction = dbState.users[currentUser].predictions[globalIndex] || null;
-                }
-                if (dbState.users[currentUser].predictionTimes) {
-                    predictionTime = dbState.users[currentUser].predictionTimes[globalIndex] || null;
-                }
-            }
+        if (manualGroup.length > 0) {
+            container.insertAdjacentHTML('beforeend', `<div class="matchday-header" style="background:var(--accent-blue)">⚡ SPECIAL STANDALONE MATCHES</div>`);
+            manualGroup.forEach(fix => buildFixtureNode(fix, container));
+        }
 
-            let timeLocked = false;
-            if (predictionTime) {
-                let elapsed = Date.now() - predictionTime;
-                if (elapsed > 10 * 60 * 1000) {
-                    timeLocked = true;
-                }
-            }
-
-            const completelyLocked = isLocked || isSettled || timeLocked;
-
-            let wrapper = document.createElement('div');
-            wrapper.className = "prediction-wrapper";
-
-            let scoreDisplay = isSettled ? `<span style="background:var(--accent-purple); color:white; padding:4px 10px; border-radius:6px; font-weight:bold;">${fixture.homeGoals} - ${fixture.awayGoals}</span>` : `<span style="font-weight:bold; color:var(--text-muted);">vs</span>`;
-            if (fixture.voided) {
-                scoreDisplay = `<span style="background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-weight:bold;">N/A</span>`;
-            }
-
-            wrapper.innerHTML = `
-                <div class="prediction-row">
-                    <span style="font-weight:bold; width: 35%; text-align: right;">${homeTeam}</span>
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        ${scoreDisplay}
-                    </div>
-                    <span style="font-weight:bold; width: 35%; text-align: left;">${awayTeam}</span>
-                </div>
-
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:10px;">
-                    <div class="btn-group">
-                        <button class="predict-btn ${userPrediction === '1' ? 'selected' : ''}" ${completelyLocked ? 'disabled' : ''} onclick="makePrediction(${globalIndex}, '1')">1</button>
-                        <button class="predict-btn ${userPrediction === 'X' ? 'selected' : ''}" ${completelyLocked ? 'disabled' : ''} onclick="makePrediction(${globalIndex}, 'X')">X</button>
-                        <button class="predict-btn ${userPrediction === '2' ? 'selected' : ''}" ${completelyLocked ? 'disabled' : ''} onclick="makePrediction(${globalIndex}, '2')">2</button>
-                    </div>
-                    <span style="font-size:12px; color:var(--text-muted);">
-                        ${completelyLocked ? '🔒 Locked' : '⏳ Unlocked (Locks 10 mins after picking)'}
-                    </span>
-                </div>
-
-                <div class="match-comments-section" style="margin-top:15px;">
-                    <div class="match-comments-list" id="match-comments-${globalIndex}"></div>
-                    <div style="display:flex; gap:6px; margin-top:8px;">
-                        <input type="text" id="match-comment-input-${globalIndex}" placeholder="Comment on this match..." style="flex-grow:1; padding:8px; font-size:12px;">
-                        <button class="btn-success" style="padding:8px 12px; font-size:12px; background:var(--accent-blue);" onclick="postMatchComment(${globalIndex})">Send</button>
-                    </div>
-                </div>
-            `;
-
-            listContainer.appendChild(wrapper);
-            renderMatchComments(globalIndex);
-        });
+        if (scheduledGroup.length > 0) {
+            container.insertAdjacentHTML('beforeend', `<div class="matchday-header">📅 COMPETITION MATCHDAY ${globalUserMatchdayView}</div>`);
+            scheduledGroup.forEach(fix => buildFixtureNode(fix, container));
+        }
     }
 
-    function makePrediction(fixtureIndex, choice) {
-        if (!currentUser) {
-            alert("Please log in or register first to make predictions!");
-            return;
+    function buildFixtureNode(fix, targetContainer) {
+        let userSelection = (currentUser && dbState.users[currentUser]?.predictions) ? dbState.users[currentUser].predictions[fix.id] : null;
+        let isLocked = fix.locked;
+
+        let playerTeam = (currentUser && dbState.users[currentUser]) ? dbState.users[currentUser].teamName : "";
+        
+        let isMatchPlayer = false;
+        if (playerTeam && !dbState.users[currentUser].isFan) {
+            isMatchPlayer = (playerTeam.toLowerCase() === fix.home.toLowerCase() || playerTeam.toLowerCase() === fix.away.toLowerCase());
         }
 
-        let fixture = dbState.fixtures[fixtureIndex];
-        if (fixture.locked || fixture.settled || fixture.voided) {
-            alert("This match is locked or settled. Predictions are closed.");
-            return;
+        let wrapper = document.createElement('div');
+        wrapper.className = "prediction-wrapper";
+
+        let labelText = '⌛ Predictions Awaiting Kick-off';
+        if (fix.settled) {
+            labelText = `Final Score: ${fix.score}`;
+        } else if (fix.locked) {
+            labelText = '🔒 Match in progress / Done (Slips Locked)';
         }
+
+        if (currentUser && dbState.users[currentUser].predictionTimes && dbState.users[currentUser].predictionTimes[fix.id] && !fix.locked && !fix.settled) {
+            let initialPredictionTime = dbState.users[currentUser].predictionTimes[fix.id];
+            let minutesPassed = Math.floor((Date.now() - initialPredictionTime) / 60000);
+            let timeRemaining = 10 - minutesPassed;
+            if (timeRemaining > 0) {
+                labelText += ` | ⏳ Edit locks in ${timeRemaining}m`;
+            } else {
+                labelText += ` | 🔒 Edit window closed (10m expired)`;
+            }
+        }
+
+        let row = document.createElement('div');
+        row.className = "prediction-row";
+        row.innerHTML = `
+            <div>
+                <span style="font-size: 16px; font-weight:bold;">${fix.home} vs ${fix.away}</span>
+                <br><span style="font-size:12px; color:var(--text-muted);">${labelText}</span>
+            </div>
+            <div class="btn-group">
+                <button class="predict-btn ${userSelection === '1' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '1')">1</button>
+                <button class="predict-btn ${userSelection === 'X' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, 'X')">X</button>
+                <button class="predict-btn ${userSelection === '2' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '2')">2</button>
+            </div>
+        `;
+        wrapper.appendChild(row);
+
+        let actionRow = document.createElement('div');
+        actionRow.className = "match-action-row";
+        
+        let doneBtnText = '✔️ Mark Match as Done';
+        let doneBtnDisabled = false;
+
+        if (isLocked) {
+            doneBtnText = '🔒 Slip Closed';
+            doneBtnDisabled = true;
+        } else if (!isMatchPlayer) {
+            doneBtnText = '👀 Spectator View';
+            doneBtnDisabled = true;
+        }
+
+        actionRow.innerHTML = `
+            <button class="done-btn" ${doneBtnDisabled ? 'disabled' : ''} onclick="markMatchAsDone(${fix.id})">
+                ${doneBtnText}
+            </button>
+        `;
+        wrapper.appendChild(actionRow);
+
+        let commentsBox = document.createElement('div');
+        commentsBox.className = "match-comments-section";
+        
+        let commentsListHtml = "";
+        if(fix.comments && fix.comments.length > 0) {
+            fix.comments.forEach(c => {
+                let deleteBtn = isAdmin ? `<span style="color:#ff3b3b; cursor:pointer; font-weight:bold; margin-left:8px;" onclick="deleteMatchComment(${fix.id}, ${c.id})">❌</span>` : '';
+                commentsListHtml += `
+                    <div class="match-comment-item">
+                        <span><b>${c.user}:</b> ${c.text}</span>
+                        <span style="font-size:10px; color:var(--text-muted);">${c.time} ${deleteBtn}</span>
+                    </div>`;
+            });
+        } else {
+            commentsListHtml = `<p style="font-size:11px; color:var(--text-muted); margin:4px; font-style:italic;">No comments yet. Write an analysis!</p>`;
+        }
+
+        commentsBox.innerHTML = `
+            <div class="match-comments-list">${commentsListHtml}</div>
+            <div style="display:flex; gap:6px;">
+                <input type="text" id="input-comment-${fix.id}" placeholder="Write match comment..." style="flex-grow:1; padding:6px; font-size:12px;">
+                <button class="btn-success" style="padding:6px 12px; font-size:12px; background:var(--accent-blue);" onclick="addMatchComment(${fix.id})">Comment</button>
+            </div>
+        `;
+        wrapper.appendChild(commentsBox);
+        targetContainer.appendChild(wrapper);
+    }
+
+    function submitPrediction(fixtureId, selection) {
+        if(!currentUser) return alert("Register or login to pick slips!");
+        
+        let fix = dbState.fixtures.find(f => f.id === fixtureId);
+        if(fix && fix.locked) return alert("This match is locked. Slips cannot be edited!");
 
         let userObj = dbState.users[currentUser];
-        if (!userObj.predictions) userObj.predictions = {};
-        if (!userObj.predictionTimes) userObj.predictionTimes = {};
-
-        let existingTime = userObj.predictionTimes[fixtureIndex];
-        if (existingTime && (Date.now() - existingTime > 10 * 60 * 1000)) {
-            alert("The 10-minute lock window for this prediction has passed!");
-            return;
+        
+        if(userObj.predictions && userObj.predictions[fixtureId]) {
+            let initialTime = userObj.predictionTimes[fixtureId] || 0;
+            let timeElapsed = Date.now() - initialTime;
+            
+            if(timeElapsed > 600000) { 
+                return alert("Access Denied: 10 minutes have passed since your initial pick. This selection is permanently locked!");
+            }
+        } else {
+            if(!userObj.predictionTimes) userObj.predictionTimes = {};
+            userObj.predictionTimes[fixtureId] = Date.now();
         }
 
-        userObj.predictions[fixtureIndex] = choice;
-        if (!existingTime) {
-            userObj.predictionTimes[fixtureIndex] = Date.now();
-        }
-
+        userObj.predictions[fixtureId] = selection;
+        renderFixtures();
         pushData();
     }
 
-    function postMatchComment(fixtureIndex) {
-        if (!currentUser) {
-            alert("Please log in to post comments.");
-            return;
+    function markMatchAsDone(fixtureId) {
+        if(!currentUser) return alert("Log in to verify match completion status!");
+        
+        let fix = dbState.fixtures.find(f => f.id === fixtureId);
+        if(!fix) return;
+
+        let playerTeam = dbState.users[currentUser]?.teamName || "";
+        
+        if (!playerTeam || (playerTeam.toLowerCase() !== fix.home.toLowerCase() && playerTeam.toLowerCase() !== fix.away.toLowerCase())) {
+            return alert("Access Denied: Only the specific teams assigned to this fixture can declare it done!");
         }
 
-        const input = document.getElementById(`match-comment-input-${fixtureIndex}`);
-        const text = input.value.trim();
-        if (!text) return;
+        if(!confirm("Are you sure this match is complete? Clicking OK locks all prediction fields instantly!")) return;
+        
+        fix.locked = true; 
+        pushData();
+        alert("Success! The match has been locked out from predictions.");
+    }
 
-        let fixture = dbState.fixtures[fixtureIndex];
-        if (!fixture.comments) fixture.comments = [];
+    function addMatchComment(fixtureId) {
+        if(!currentUser) return alert("Log in to post match comments!");
+        let inputEl = document.getElementById(`input-comment-${fixtureId}`);
+        let txt = inputEl.value.trim();
+        if(!txt) return;
 
-        fixture.comments.push({
-            user: currentUser,
-            text: text,
-            time: Date.now()
-        });
-
-        input.value = "";
+        let fix = dbState.fixtures.find(f => f.id === fixtureId);
+        if(!fix.comments) fix.comments = [];
+        
+        let timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        fix.comments.push({ id: Date.now(), user: currentUser, text: txt, time: timeStr });
+        inputEl.value = "";
         pushData();
     }
 
-    function renderMatchComments(fixtureIndex) {
-        const container = document.getElementById(`match-comments-${fixtureIndex}`);
-        if (!container) return;
-
-        container.innerHTML = "";
-        let fixture = dbState.fixtures[fixtureIndex];
-        if (!fixture.comments || fixture.comments.length === 0) {
-            container.innerHTML = `<div style="color:var(--text-muted); font-style:italic; font-size:12px; padding:4px;">No comments yet. Start the conversation!</div>`;
-            return;
+    function deleteMatchComment(fixtureId, commentId) {
+        let fix = dbState.fixtures.find(f => f.id === fixtureId);
+        if(fix && fix.comments) {
+            fix.comments = fix.comments.filter(c => c.id !== commentId);
+            pushData();
         }
-
-        fixture.comments.forEach(c => {
-            let item = document.createElement('div');
-            item.className = "match-comment-item";
-            item.innerHTML = `<span><b>${c.user}:</b> ${c.text}</span> <span style="font-size:10px; color:var(--text-muted);">${new Date(c.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
-            container.appendChild(item);
-        });
     }
 
     function renderStandings() {
+        const tbody = document.querySelector('#league-table tbody');
+        tbody.innerHTML = "";
+        
         let tableMap = {};
 
-        for (let uName in dbState.users) {
-            let uObj = dbState.users[uName];
-            if (!uObj.isFan && uObj.teamName) {
-                tableMap[uObj.teamName] = {
-                    team: uObj.teamName,
-                    p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0
-                };
+        for (let user in dbState.users) {
+            if (dbState.users[user].isFan) continue;
+            let tName = dbState.users[user].teamName;
+            if (tName && !tableMap[tName.toLowerCase()]) {
+                tableMap[tName.toLowerCase()] = { name: tName, p: 0, w: 0, d: 0, l: 0, gd: 0, pts: 0 };
             }
         }
 
-        dbState.fixtures.forEach(f => {
-            if (f.settled && !f.voided) {
-                let hTeam = f.home;
-                let aTeam = f.away;
-                let hGoals = parseInt(f.homeGoals);
-                let aGoals = parseInt(f.awayGoals);
+        dbState.fixtures.forEach(fix => {
+            if(!fix.settled || !fix.score) return;
 
-                if (tableMap[hTeam]) {
-                    tableMap[hTeam].p++;
-                    tableMap[hTeam].gf += hGoals;
-                    tableMap[hTeam].ga += aGoals;
-                }
-                if (tableMap[aTeam]) {
-                    tableMap[aTeam].p++;
-                    tableMap[aTeam].gf += aGoals;
-                    tableMap[aTeam].ga += hGoals;
-                }
+            let hKey = fix.home.toLowerCase();
+            let aKey = fix.away.toLowerCase();
 
-                if (hGoals > aGoals) {
-                    if (tableMap[hTeam]) { tableMap[hTeam].w++; tableMap[hTeam].pts += 3; }
-                    if (tableMap[aTeam]) { tableMap[aTeam].l++; }
-                } else if (hGoals < aGoals) {
-                    if (tableMap[aTeam]) { tableMap[aTeam].w++; tableMap[aTeam].pts += 3; }
-                    if (tableMap[hTeam]) { tableMap[hTeam].l++; }
-                } else {
-                    if (tableMap[hTeam]) { tableMap[hTeam].d++; tableMap[hTeam].pts += 1; }
-                    if (tableMap[aTeam]) { tableMap[aTeam].d++; tableMap[aTeam].pts += 1; }
-                }
-            }
-        });
+            if(!tableMap[hKey]) tableMap[hKey] = { name: fix.home, p: 0, w: 0, d: 0, l: 0, gd: 0, pts: 0 };
+            if(!tableMap[aKey]) tableMap[aKey] = { name: fix.away, p: 0, w: 0, d: 0, l: 0, gd: 0, pts: 0 };
 
-        let standingsArray = Object.values(tableMap);
-        standingsArray.sort((a, b) => {
-            if (b.pts !== a.pts) return b.pts - a.pts;
-            let gdB = (b.gf - b.ga);
-            let gdA = (a.gf - a.ga);
-            if (gdB !== gdA) return gdB - gdA;
-            return b.gf - a.gf;
-        });
+            tableMap[hKey].p += 1;
+            tableMap[aKey].p += 1;
 
-        const tbody = document.querySelector('#league-table tbody');
-        if (tbody) {
-            tbody.innerHTML = "";
-            if (standingsArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); font-style:italic;">No active teams found.</td></tr>`;
+            if (fix.score === "N/A") return;
+
+            let scores = fix.score.split('-');
+            let hG = parseInt(scores[0]);
+            let aG = parseInt(scores[1]);
+
+            tableMap[hKey].gd += (hG - aG);
+            tableMap[aKey].gd += (aG - hG);
+
+            if(hG > aG) {
+                tableMap[hKey].w += 1; tableMap[hKey].pts += 3;
+                tableMap[aKey].l += 1;
+            } else if (aG > hG) {
+                tableMap[aKey].w += 1; tableMap[aKey].pts += 3;
+                tableMap[hKey].l += 1;
             } else {
-                standingsArray.forEach((row, index) => {
-                    let gd = row.gf - row.ga;
-                    let gdStr = gd > 0 ? `+${gd}` : gd;
-                    tbody.innerHTML += `
-                        <tr>
-                            <td><b>${index + 1}</b></td>
-                            <td><b>${row.team}</b></td>
-                            <td>${row.p}</td>
-                            <td>${row.w}</td>
-                            <td>${row.d}</td>
-                            <td>${row.l}</td>
-                            <td>${gdStr}</td>
-                            <td><b>${row.pts}</b></td>
-                        </tr>
-                    `;
-                });
+                tableMap[hKey].d += 1; tableMap[hKey].pts += 1;
+                tableMap[aKey].d += 1; tableMap[aKey].pts += 1;
             }
-        }
+        });
 
-        let predictorStats = [];
+        let cleanArr = Object.values(tableMap).sort((a,b) => b.pts - a.pts || b.gd - a.gd);
 
-        for (let uName in dbState.users) {
-            let uObj = dbState.users[uName];
-            let correctPicks = 0;
-
-            if (uObj.predictions) {
-                for (let fIndex in uObj.predictions) {
-                    let fixture = dbState.fixtures[fIndex];
-                    if (fixture && fixture.settled && !fixture.voided) {
-                        let hG = parseInt(fixture.homeGoals);
-                        let aG = parseInt(fixture.awayGoals);
-                        let actualOutcome = hG > aG ? '1' : (hG < aG ? '2' : 'X');
-
-                        if (uObj.predictions[fIndex] === actualOutcome) {
-                            correctPicks++;
-                        }
-                    }
-                }
-            }
-
-            predictorStats.push({
-                username: uName,
-                roleText: uObj.isFan ? "📢 Fan" : `⚽ ${uObj.teamName || 'Participant'}`,
-                correctPicks: correctPicks,
-                totalPoints: correctPicks * 5
+        if (cleanArr.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No teams operating on table grid yet.</td></tr>`;
+        } else {
+            cleanArr.forEach((team, idx) => {
+                let r = document.createElement('tr');
+                r.innerHTML = `
+                    <td style="font-weight: bold; color: var(--text-muted); text-align: center;">${idx + 1}</td>
+                    <td><b>${team.name}</b></td>
+                    <td>${team.p}</td>
+                    <td>${team.w}</td>
+                    <td>${team.d}</td>
+                    <td>${team.l}</td>
+                    <td>${team.gd > 0 ? '+' + team.gd : team.gd}</td>
+                    <td style="color:var(--accent-blue)"><b>${team.pts}</b></td>`;
+                tbody.appendChild(r);
             });
         }
 
-        predictorStats.sort((a, b) => b.totalPoints - a.totalPoints);
+        const pTbody = document.querySelector('#predictor-table tbody');
+        pTbody.innerHTML = "";
 
-        const predTbody = document.querySelector('#predictor-table tbody');
-        if (predTbody) {
-            predTbody.innerHTML = "";
-            if (predictorStats.length === 0) {
-                predTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); font-style:italic;">No predictor data available.</td></tr>`;
-            } else {
-                predictorStats.forEach((p, idx) => {
-                    predTbody.innerHTML += `
-                        <tr>
-                            <td><b>${idx + 1}</b></td>
-                            <td><b>${p.username}</b></td>
-                            <td>${p.roleText}</td>
-                            <td>${p.correctPicks}</td>
-                            <td><b style="color:var(--accent-orange);">${p.totalPoints} pts</b></td>
-                        </tr>
-                    `;
-                });
-            }
+        let pUsers = [];
+        for(let name in dbState.users) {
+            pUsers.push({ name: name, ...dbState.users[name] });
+        }
+        pUsers.sort((a,b) => b.points - a.points);
+
+        if (pUsers.length === 0) {
+            pTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No users found.</td></tr>`;
+        } else {
+            pUsers.forEach((u, index) => {
+                let roleDisplay = u.isFan ? `<i style="color:var(--accent-purple)">📢 Fan</i>` : `<span style="color:var(--accent-orange); font-weight:bold;">${u.teamName}</span>`;
+                let r = document.createElement('tr');
+                r.innerHTML = `
+                    <td style="font-weight: bold; color: var(--text-muted); text-align: center;">${index + 1}</td>
+                    <td>👤 <b>${u.name}</b></td>
+                    <td>${roleDisplay}</td>
+                    <td>${u.correct || 0}</td>
+                    <td style="color:var(--accent-green); font-weight:bold;">${u.points || 0} pts</td>`;
+                pTbody.appendChild(r);
+            });
         }
     }
 
     function renderChat() {
-        const chatBox = document.getElementById('chat-box');
-        if (!chatBox) return;
+        const box = document.getElementById('chat-box');
+        if(!box) return;
 
-        const isAtBottom = chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 50;
+        let shouldScroll = (box.scrollTop + box.clientHeight >= box.scrollHeight - 50);
 
-        chatBox.innerHTML = "";
-        
-        let unifiedChatList = [];
-        if (dbState.chat && Array.isArray(dbState.chat)) {
-            unifiedChatList = dbState.chat.map(c => ({
-                user: c.user,
-                text: c.msg || c.text,
-                time: c.time,
-                id: c.id || null
-            }));
-        }
+        box.innerHTML = "";
+        dbState.chat.forEach(msg => {
+            let div = document.createElement('div');
+            div.className = "chat-msg";
 
-        if (unifiedChatList.length === 0) {
-            chatBox.innerHTML = `<p style="color:var(--text-muted); text-align:center; font-style:italic; margin-top:140px;">No messages yet. Say hello to the community!</p>`;
-            return;
-        }
-
-        unifiedChatList.forEach((msg, index) => {
-            let msgDiv = document.createElement('div');
-            msgDiv.className = "chat-msg";
-
-            let isOwner = (currentUser && msg.user === currentUser);
             let actionButtons = "";
-
-            if (isOwner || isAdmin) {
-                actionButtons = `
-                    <div class="chat-actions">
-                        ${isOwner ? `<button onclick="editChat(${index})">Edit</button>` : ""}
-                        <button class="btn-delete-chat" onclick="deleteChat(${index})">Delete</button>
-                    </div>
-                `;
+            if (currentUser && msg.user === currentUser) {
+                actionButtons += `<button onclick="initiateEditChat(${msg.id}, '${escapeHtml(msg.msg)}')">📝 Edit</button>`;
+            }
+            if (isAdmin) {
+                actionButtons += `<button class="btn-delete-chat" onclick="deleteChatMessage(${msg.id})">❌ Delete</button>`;
             }
 
-            let timeDisplay = msg.time;
-            if (typeof msg.time === 'number') {
-                timeDisplay = new Date(msg.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            }
+            let isUserFan = dbState.users[msg.user]?.isFan || false;
+            let fanTag = isUserFan ? ` <span style="font-size:10px; background:rgba(136,0,255,0.1); color:var(--accent-purple); padding:2px 6px; border-radius:10px; margin-left:4px;">FAN</span>` : "";
 
-            msgDiv.innerHTML = `
+            div.innerHTML = `
                 <div class="chat-header">
-                    <span class="chat-username">${msg.user}</span>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:10px;">${timeDisplay || ''}</span>
-                        ${actionButtons}
-                    </div>
+                    <div><span class="chat-username"><b>${msg.user}</b></span>${fanTag}${msg.edited ? `<span style="font-size:10px; font-style:italic; color:var(--text-muted); margin-left:5px;">(edited)</span>` : ''}</div>
+                    <div style="display: flex; align-items: center; gap: 10px;"><span>${msg.time}</span><div class="chat-actions">${actionButtons}</div></div>
                 </div>
-                <div style="word-break: break-word; font-size: 14px;">${msg.text}</div>
+                <div style="margin-top:5px; word-break: break-word;">${msg.msg}</div>
             `;
-            chatBox.appendChild(msgDiv);
+            box.appendChild(div);
         });
 
-        if (isAtBottom) {
-            chatBox.scrollTop = chatBox.scrollHeight;
+        if (shouldScroll && activeTabId === 'chat-tab') {
+            box.scrollTop = box.scrollHeight;
         }
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     }
 
     function sendChat() {
-        if (!currentUser) {
-            alert("Please log in or register a username to chat!");
-            return;
-        }
-
-        const input = document.getElementById('chat-input');
-        const text = input.value.trim();
-        if (!text) return;
-
-        if (!dbState.chat) dbState.chat = [];
+        if(!currentUser) return alert("Log in to join chat rooms!");
+        let text = document.getElementById('chat-input').value.trim();
+        if(!text) return;
 
         if (editChatId !== null) {
-            if (dbState.chat[editChatId]) {
-                dbState.chat[editChatId].msg = text;
-                dbState.chat[editChatId].text = text;
-            }
-            editChatId = null;
-            document.getElementById('edit-indicator').classList.add('hidden');
-            document.getElementById('chat-submit-btn').innerText = "Post";
+            let messageObj = dbState.chat.find(m => m.id === editChatId);
+            if (messageObj) { messageObj.msg = text; messageObj.edited = true; }
+            cancelEditMode();
         } else {
-            dbState.chat.push({
-                id: Date.now(),
-                user: currentUser,
-                msg: text,
-                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-            });
+            let dateStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            let monthDay = new Date().toLocaleDateString([], {month: 'short', day: 'numeric'});
+            dbState.chat.push({ id: Date.now(), user: currentUser, msg: text, time: `${dateStr} ${monthDay}` });
+            
+            localChatCount++;
         }
-
-        input.value = "";
+        document.getElementById('chat-input').value = "";
         pushData();
     }
 
-    function editChat(index) {
-        let msg = dbState.chat[index];
-        if (!msg || msg.user !== currentUser) return;
-
-        document.getElementById('chat-input').value = msg.msg || msg.text;
-        editChatId = index;
+    function initiateEditChat(id, currentText) {
+        editChatId = id;
+        document.getElementById('chat-input').value = currentText;
         document.getElementById('edit-indicator').classList.remove('hidden');
-        document.getElementById('chat-submit-btn').innerText = "Update";
+        document.getElementById('chat-submit-btn').innerText = "Save Update";
         document.getElementById('chat-input').focus();
     }
 
@@ -1353,234 +1289,280 @@
         document.getElementById('chat-submit-btn').innerText = "Post";
     }
 
-    function deleteChat(index) {
-        if (!dbState.chat) return;
-        dbState.chat.splice(index, 1);
-        if (editChatId === index) {
-            cancelEditMode();
+    function deleteChatMessage(id) {
+        if(confirm("Permanently delete message?")) {
+            dbState.chat = dbState.chat.filter(m => m.id !== id);
+            localChatCount = Math.max(0, localChatCount - 1);
+            pushData();
         }
-        pushData();
     }
 
     function verifyAdmin() {
-        const pass = document.getElementById('admin-pass').value;
-        if (pass === "admin123" || pass === "DLS2026") {
+        if(document.getElementById('admin-pass').value === "admin123") { 
             isAdmin = true;
             document.getElementById('admin-login-box').classList.add('hidden');
             document.getElementById('admin-controls').classList.remove('hidden');
-            renderAdminPanel();
+            renderUI();
         } else {
-            alert("Incorrect Admin Password!");
+            alert("Wrong credentials entry!");
         }
-    }
-
-    function renderAdminPanel() {
-        if (!isAdmin) return;
-
-        const adminFixturesList = document.getElementById('admin-fixtures-list');
-        if (adminFixturesList) {
-            adminFixturesList.innerHTML = "";
-            
-            if (dbState.fixtures.length === 0) {
-                adminFixturesList.innerHTML = `<p style="color:var(--text-muted); font-style:italic;">No fixtures available to manage.</p>`;
-            } else {
-                dbState.fixtures.forEach((f, idx) => {
-                    let row = document.createElement('div');
-                    row.style.cssText = "background:white; border:1px solid var(--border-color); padding:12px; border-radius:8px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;";
-                    
-                    row.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:bold;">Matchday ${f.matchday || 1}: ${f.home} vs ${f.away}</span>
-                            <span style="font-size:12px; color:var(--text-muted);">Status: ${f.settled ? 'Settled' : (f.voided ? 'Voided (N/A)' : 'Pending')}</span>
-                        </div>
-                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                            <input type="number" id="admin-home-goals-${idx}" placeholder="Home Goals" value="${f.homeGoals !== undefined ? f.homeGoals : ''}" style="width:100px; padding:6px;">
-                            <input type="number" id="admin-away-goals-${idx}" placeholder="Away Goals" value="${f.awayGoals !== undefined ? f.awayGoals : ''}" style="width:100px; padding:6px;">
-                            <button class="btn-success" style="background:var(--accent-green); padding:6px 12px; font-size:12px;" onclick="adminSettleMatch(${idx})">Settle Result</button>
-                            <button class="done-btn" style="padding:6px 12px;" onclick="adminVoidMatch(${idx})">Mark N/A</button>
-                            <button style="background:#ff3b3b; color:white; padding:6px 12px; font-size:12px;" onclick="adminDeleteFixture(${idx})">Delete</button>
-                        </div>
-                    `;
-                    adminFixturesList.appendChild(row);
-                });
-            }
-        }
-
-        const userTableBody = document.querySelector('#admin-user-table tbody');
-        if (userTableBody) {
-            userTableBody.innerHTML = "";
-            let users = dbState.users;
-            if (Object.keys(users).length === 0) {
-                userTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); font-style:italic;">No registered users found.</td></tr>`;
-            } else {
-                for (let name in users) {
-                    let uObj = users[name];
-                    let statusText = uObj.isFan ? "📢 Fan" : `⚽ ${uObj.teamName || 'N/A'}`;
-                    userTableBody.innerHTML += `
-                        <tr>
-                            <td><b>${name}</b></td>
-                            <td>${statusText}</td>
-                            <td><b style="color:var(--accent-orange);">${uObj.pin}</b></td>
-                            <td>
-                                <button style="background:#ff3b3b; color:white; padding:4px 8px; font-size:11px;" onclick="adminDeleteUser('${name}')">Delete User</button>
-                            </td>
-                        </tr>
-                    `;
-                }
-            }
-        }
-    }
-
-    function adminGenerateRoundRobin() {
-        let activeParticipants = [];
-        for (let uName in dbState.users) {
-            let uObj = dbState.users[uName];
-            if (!uObj.isFan && uObj.teamName) {
-                activeParticipants.push(uObj.teamName);
-            }
-        }
-
-        if (activeParticipants.length < 2) {
-            alert("You need at least 2 registered participant teams to generate a Round-Robin schedule!");
-            return;
-        }
-
-        let teams = [...activeParticipants];
-        if (teams.length % 2 !== 0) {
-            teams.push("BYE");
-        }
-
-        let numTeams = teams.length;
-        let rounds = numTeams - 1;
-        let half = numTeams / 2;
-        let generatedFixtures = [];
-
-        let firstLegFixtures = [];
-        for (let r = 0; r < rounds; r++) {
-            let matchdayNum = r + 1;
-            for (let i = 0; i < half; i++) {
-                let t1 = teams[i];
-                let t2 = teams[numTeams - 1 - i];
-
-                if (t1 !== "BYE" && t2 !== "BYE") {
-                    firstLegFixtures.push({
-                        matchday: matchdayNum,
-                        home: t1,
-                        away: t2,
-                        homeGoals: 0,
-                        awayGoals: 0,
-                        settled: false,
-                        voided: false,
-                        locked: false,
-                        comments: []
-                    });
-                }
-            }
-            teams.splice(1, 0, teams.pop());
-        }
-
-        generatedFixtures.push(...firstLegFixtures);
-
-        let secondLegFixtures = firstLegFixtures.map(f => {
-            return {
-                matchday: f.matchday + rounds,
-                home: f.away,
-                away: f.home,
-                homeGoals: 0,
-                awayGoals: 0,
-                settled: false,
-                voided: false,
-                locked: false,
-                comments: []
-            };
-        });
-
-        generatedFixtures.push(...secondLegFixtures);
-
-        dbState.fixtures = generatedFixtures;
-        pushData();
-        alert(`Successfully generated ${generatedFixtures.length} matches across ${rounds * 2} matchdays!`);
     }
 
     function adminAddFixture() {
-        const home = document.getElementById('new-home').value.trim();
-        const away = document.getElementById('new-away').value.trim();
-
-        if (!home || !away) {
-            alert("Please enter both home and away team names.");
-            return;
-        }
-
-        const maxDay = dbState.fixtures.length > 0 ? Math.max(...dbState.fixtures.map(f => f.matchday || 1)) : 1;
+        let home = document.getElementById('new-home').value.trim();
+        let away = document.getElementById('new-away').value.trim();
+        if(!home || !away) return alert("Fill fields!");
 
         dbState.fixtures.push({
-            matchday: maxDay,
-            home: home,
-            away: away,
-            homeGoals: 0,
-            awayGoals: 0,
-            settled: false,
-            voided: false,
-            locked: false,
-            comments: []
+            id: Date.now(), home: home, away: away, locked: false, settled: false,
+            score: "", outcome: "", matchday: 0, comments: []
         });
-
         document.getElementById('new-home').value = "";
         document.getElementById('new-away').value = "";
         pushData();
     }
 
-    function adminSettleMatch(index) {
-        const homeInput = document.getElementById(`admin-home-goals-${index}`).value;
-        const awayInput = document.getElementById(`admin-away-goals-${index}`).value;
+    function adminDeleteSingleFixture(matchId) {
+        if(!confirm("Are you sure you want to permanently delete this single match fixture?")) return;
+        
+        let fix = dbState.fixtures.find(f => f.id === matchId);
+        if (fix && fix.settled && fix.outcome !== "NONE") {
+            for(let name in dbState.users) {
+                if(dbState.users[name].predictions && dbState.users[name].predictions[matchId] === fix.outcome) {
+                    dbState.users[name].points = Math.max(0, (dbState.users[name].points || 0) - 5);
+                    dbState.users[name].correct = Math.max(0, (dbState.users[name].correct || 0) - 1);
+                }
+            }
+        }
+        
+        dbState.fixtures = dbState.fixtures.filter(f => f.id !== matchId);
+        pushData();
+        alert("Match fixture successfully deleted and affected points rolled back.");
+    }
 
-        if (homeInput === "" || awayInput === "") {
-            alert("Please enter goals for both teams to settle.");
-            return;
+    function adminGenerateRoundRobin() {
+        let teams = [];
+        let observed = new Set();
+
+        for (let user in dbState.users) {
+            if(dbState.users[user].isFan) continue;
+            let tName = dbState.users[user].teamName;
+            if(tName && !observed.has(tName.toLowerCase())) {
+                observed.add(tName.toLowerCase());
+                teams.push(tName);
+            }
         }
 
-        let fixture = dbState.fixtures[index];
-        fixture.homeGoals = parseInt(homeInput);
-        fixture.awayGoals = parseInt(awayInput);
-        fixture.settled = true;
-        fixture.voided = false;
-        fixture.locked = true;
+        if(teams.length < 2) return alert("You need at least 2 registered teams!");
+        if(!confirm(`Generate Home/Away loops for ${teams.length} teams?`)) return;
 
+        if (teams.length % 2 !== 0) teams.push("BYE");
+
+        let numTeams = teams.length;
+        let totalRounds = numTeams - 1;
+        let matchesPerRound = numTeams / 2;
+        let scheduledFixtures = [];
+        let baseTime = Date.now();
+
+        for (let round = 0; round < totalRounds; round++) {
+            let matchdayNumber = round + 1;
+            for (let match = 0; match < matchesPerRound; match++) {
+                let home = teams[(round + match) % (numTeams - 1)];
+                let away = teams[(numTeams - 1 - match + round) % (numTeams - 1)];
+                if (match === 0) away = teams[numTeams - 1];
+
+                if(home !== "BYE" && away !== "BYE") {
+                    scheduledFixtures.push({
+                        id: baseTime + Math.random(), home: home, away: away,
+                        locked: false, settled: false, score: "", outcome: "", matchday: matchdayNumber, comments: []
+                    });
+                }
+            }
+        }
+
+        for (let round = 0; round < totalRounds; round++) {
+            let matchdayNumber = totalRounds + round + 1;
+            for (let match = 0; match < matchesPerRound; match++) {
+                let away = teams[(round + match) % (numTeams - 1)];
+                let home = teams[(numTeams - 1 - match + round) % (numTeams - 1)];
+                if (match === 0) home = teams[numTeams - 1];
+
+                if(home !== "BYE" && away !== "BYE") {
+                    scheduledFixtures.push({
+                        id: baseTime + Math.random() + 5000, home: home, away: away,
+                        locked: false, settled: false, score: "", outcome: "", matchday: matchdayNumber, comments: []
+                    });
+                }
+            }
+        }
+
+        dbState.fixtures = dbState.fixtures.concat(scheduledFixtures);
         pushData();
-    }
-
-    function adminVoidMatch(index) {
-        let fixture = dbState.fixtures[index];
-        fixture.homeGoals = 0;
-        fixture.awayGoals = 0;
-        fixture.settled = true;
-        fixture.voided = true;
-        fixture.locked = true;
-
-        pushData();
-    }
-
-    function adminDeleteFixture(index) {
-        dbState.fixtures.splice(index, 1);
-        pushData();
+        alert("League scheduled!");
     }
 
     function adminWipeFixtures() {
-        if (confirm("Are you sure you want to delete all match fixtures?")) {
+        if(confirm("Wipe all matches? This will also completely reset all player prediction scores to 0!")) {
             dbState.fixtures = [];
+            
+            for(let name in dbState.users) {
+                dbState.users[name].points = 0;
+                dbState.users[name].correct = 0;
+                dbState.users[name].predictions = {};
+                dbState.users[name].predictionTimes = {};
+            }
+            
+            pushData();
+            alert("All fixtures cleared and user predictor scores reset to 0.");
+        }
+    }
+
+    function forceClearSession(username) {
+        if(confirm(`Wipe ${username}?`)) {
+            delete dbState.users[username];
             pushData();
         }
     }
 
-    function adminDeleteUser(username) {
-        if (confirm(`Are you sure you want to delete user profile "${username}"?`)) {
-            delete dbState.users[username];
-            if (currentUser === username) {
-                logout();
-            } else {
-                pushData();
+    function renderAdminPanel() {
+        if(!isAdmin) return;
+        
+        if (document.activeElement && (document.activeElement.id.startsWith('score-') || document.activeElement.id === 'admin-matchday-view-select')) {
+            renderAdminUserTable(); 
+            return;
+        }
+        
+        renderAdminFixturesList();
+        renderAdminUserTable();
+    }
+
+    function renderAdminFixturesList() {
+        const container = document.getElementById('admin-fixtures-list');
+        if(!container) return;
+        container.innerHTML = "";
+        
+        const currentActiveDay = getCurrentMatchday();
+        if (selectedAdminMatchdayView === null) selectedAdminMatchdayView = currentActiveDay;
+
+        const maxMatchday = Math.max(...dbState.fixtures.map(f => f.matchday || 0), 1);
+        
+        let selectBlock = document.createElement('div');
+        selectBlock.style.marginBottom = "15px";
+        selectBlock.innerHTML = `<label><b>Filter Admin Settle Grid: </b></label><select id="admin-matchday-view-select" style="padding:6px; font-weight:bold;"></select>`;
+        container.appendChild(selectBlock);
+
+        const innerDropdown = selectBlock.querySelector('select');
+        let dHtml = "";
+        for(let i = 1; i <= maxMatchday; i++) {
+            let tag = (i === currentActiveDay) ? " (Today)" : "";
+            let sl = (i === selectedAdminMatchdayView) ? "selected" : "";
+            dHtml += `<option value="${i}" ${sl}>Matchday ${i}${tag}</option>`;
+        }
+        innerDropdown.innerHTML = dHtml;
+        innerDropdown.onchange = function() {
+            selectedAdminMatchdayView = parseInt(this.value);
+            renderAdminFixturesList();
+        };
+
+        const targetFixtures = dbState.fixtures.filter(f => f.matchday === 0 || f.matchday === selectedAdminMatchdayView);
+
+        if(targetFixtures.length === 0) {
+            let p = document.createElement('p');
+            p.style.color = "var(--text-muted)";
+            p.innerText = "No fixtures found for this loop day.";
+            container.appendChild(p);
+            return;
+        }
+
+        targetFixtures.forEach(fix => {
+            let tag = fix.matchday > 0 ? `[MD ${fix.matchday}] ` : '[Manual] ';
+            let statusTag = fix.settled ? '✅ Settled' : (fix.locked ? '🔒 Locked' : '⏳ Active');
+            
+            let div = document.createElement('div');
+            div.style.padding = "12px 0";
+            div.style.borderBottom = "1px solid #e2e8f0";
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <span><b>${tag}${fix.home} vs ${fix.away}</b> <small style="margin-left:8px; color:var(--text-muted)">(${statusTag})</small></span>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" id="score-${fix.id}" placeholder="e.g. 2-1 or N/A" style="width:100px; padding:6px; text-transform:uppercase;" value="${fix.score || ''}">
+                        <button class="btn-success" style="padding: 6px 12px; background:var(--accent-blue);" onclick="settleMatch(${fix.id})">Settle</button>
+                        <button style="background:#ff3b3b; color:white; padding: 6px 10px; border-radius:8px; font-size:12px;" onclick="adminDeleteSingleFixture(${fix.id})">❌ Delete</button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function renderAdminUserTable() {
+        const userTbody = document.querySelector('#admin-user-table tbody');
+        if(!userTbody) return;
+        userTbody.innerHTML = "";
+        
+        let initialKeys = Object.keys(dbState.users || {});
+        if(initialKeys.length === 0) {
+            userTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted)">No profiles found.</td></tr>`;
+        } else {
+            initialKeys.forEach(name => {
+                let uData = dbState.users[name];
+                let typeText = uData.isFan ? "📢 FAN" : `⚽ ${uData.teamName}`;
+                let row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><b>${name}</b></td>
+                    <td>${typeText}</td>
+                    <td><code style="font-size:15px; background:#f1f5f9; padding:4px 8px; border-radius:4px; font-weight:bold; color:var(--accent-orange);">${uData.pin || '----'}</code></td>
+                    <td><button style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); padding:5px 10px; font-size:12px;" onclick="forceClearSession('${name}')">Wipe User</button></td>
+                `;
+                userTbody.appendChild(row);
+            });
+        }
+    }
+
+    function settleMatch(matchId) {
+        const valueBox = document.getElementById(`score-${matchId}`);
+        const inputVal = valueBox.value.trim().toUpperCase();
+        
+        if (!inputVal) return alert("Enter score format (e.g. '2-1') or 'N/A'!");
+
+        let finalScoreString = "";
+        let calculatedOutcome = "";
+        let isNA = false;
+
+        if (inputVal === "N/A" || inputVal === "NA") {
+            isNA = true;
+            finalScoreString = "N/A";
+            calculatedOutcome = "NONE"; 
+        } else {
+            const structuralParts = inputVal.split('-');
+            if (structuralParts.length !== 2 || isNaN(structuralParts[0]) || isNaN(structuralParts[1])) {
+                return alert("Invalid text structure format! Use '2-1' or 'N/A'.");
+            }
+            let hG = parseInt(structuralParts[0]);
+            let aG = parseInt(structuralParts[1]);
+            finalScoreString = `${hG}-${aG}`;
+            calculatedOutcome = hG > aG ? "1" : (aG > hG ? "2" : "X");
+        }
+
+        const fix = dbState.fixtures.find(f => f.id === matchId);
+        if (!fix) return;
+
+        fix.score = finalScoreString;
+        fix.outcome = calculatedOutcome;
+        fix.locked = true;
+        fix.settled = true; 
+
+        if (!isNA) {
+            for(let name in dbState.users) {
+                if(dbState.users[name].predictions && dbState.users[name].predictions[matchId] === calculatedOutcome) {
+                    dbState.users[name].points = (dbState.users[name].points || 0) + 5;
+                    dbState.users[name].correct = (dbState.users[name].correct || 0) + 1;
+                }
             }
         }
+
+        pushData();
+        alert("Match successfully settled!");
     }
 </script>
 </body>
