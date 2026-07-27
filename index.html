@@ -107,6 +107,7 @@
             border-radius: 8px 8px 0 0;
             transition: all 0.3s ease;
             white-space: nowrap;
+            position: relative;
         }
 
         .tab-btn:hover {
@@ -118,6 +119,22 @@
             color: var(--accent-purple);
             background: rgba(136, 0, 255, 0.08);
             border-bottom: 4px solid var(--accent-purple);
+        }
+
+        .chat-badge {
+            background-color: #ff3b3b;
+            color: white;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+            display: inline-block;
+            vertical-align: middle;
+            font-weight: bold;
+        }
+
+        .chat-badge.hidden {
+            display: none !important;
         }
 
         .tab-content { display: none; }
@@ -366,7 +383,6 @@
             color: var(--accent-purple);
         }
 
-        /* Modal styling for online list */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -411,7 +427,6 @@
         </div>
     </header>
 
-    <!-- Modal element for showing who is online -->
     <div id="online-modal" class="modal-overlay hidden" onclick="closeOnlineModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
             <h3 style="margin-top:0; border-bottom: 2px solid var(--accent-blue); padding-bottom: 8px;">Active Participants</h3>
@@ -462,10 +477,10 @@
     </div>
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('fixtures-tab')">📅 FIXTURES AND PREDICTIONS</button>
-        <button class="tab-btn" onclick="switchTab('standings-tab')">📊 Leaderboards</button>
-        <button class="tab-btn" onclick="switchTab('chat-tab')">💬 Fan Zone Chat</button>
-        <button class="tab-btn" onclick="switchTab('admin-tab')">⚙️ Admin Control</button>
+        <button class="tab-btn active" id="btn-fixtures-tab" onclick="switchTab('fixtures-tab')">📅 FIXTURES AND PREDICTIONS</button>
+        <button class="tab-btn" id="btn-standings-tab" onclick="switchTab('standings-tab')">📊 Leaderboards</button>
+        <button class="tab-btn" id="btn-chat-tab" onclick="switchTab('chat-tab')">💬 Fan Zone Chat <span id="chat-unread-badge" class="chat-badge hidden">0</span></button>
+        <button class="tab-btn" id="btn-admin-tab" onclick="switchTab('admin-tab')">⚙️ Admin Control</button>
     </div>
 
     <div class="grid">
@@ -590,6 +605,10 @@
 
     let globalUserMatchdayView = null;
     let selectedAdminMatchdayView = null;
+    
+    let activeTabId = 'fixtures-tab';
+    let localChatCount = 0; 
+    let unreadChatCount = 0;
 
     window.onload = function() {
         checkLocalSession();
@@ -640,7 +659,6 @@
                     dbState.users[name].predictions = {};
                     updateNeeded = true;
                 }
-                // Initialize timestamps object if missing
                 if (!dbState.users[name].predictionTimes) {
                     dbState.users[name].predictionTimes = {};
                     updateNeeded = true;
@@ -666,6 +684,15 @@
             if (isInitial) {
                 dbState.visits = (dbState.visits || 0) + 1;
                 updateNeeded = true;
+                localChatCount = dbState.chat.length; 
+            } else {
+                if (dbState.chat.length > localChatCount) {
+                    let incomingMessages = dbState.chat.length - localChatCount;
+                    if (activeTabId !== 'chat-tab') {
+                        unreadChatCount += incomingMessages;
+                    }
+                    localChatCount = dbState.chat.length;
+                }
             }
 
             if (updateNeeded) {
@@ -715,6 +742,14 @@
             document.getElementById('user-pin-display').innerHTML = `Your Account Recovery Pin: <b style="color:var(--accent-orange); font-size:16px;">${userObj.pin}</b>`;
         }
 
+        const badgeEl = document.getElementById('chat-unread-badge');
+        if (unreadChatCount > 0) {
+            badgeEl.innerText = unreadChatCount;
+            badgeEl.classList.remove('hidden');
+        } else {
+            badgeEl.classList.add('hidden');
+        }
+
         updateSelectorDropdowns();
         renderFixtures();
         renderStandings();
@@ -722,7 +757,6 @@
         renderAdminPanel();
     }
 
-    /* Modal controls for seeing who is currently online */
     function openOnlineModal() {
         const modal = document.getElementById('online-modal');
         const listContainer = document.getElementById('online-users-list');
@@ -778,10 +812,27 @@
     }
 
     function switchTab(tabId) {
+        activeTabId = tabId;
+        
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        
         document.getElementById(tabId).classList.add('active');
-        if(window.event) window.event.currentTarget.classList.add('active');
+        
+        const currentBtn = document.getElementById(`btn-${tabId}`);
+        if(currentBtn) currentBtn.classList.add('active');
+        
+        if (tabId === 'chat-tab') {
+            unreadChatCount = 0;
+            localChatCount = dbState.chat.length;
+            const badgeEl = document.getElementById('chat-unread-badge');
+            if(badgeEl) badgeEl.classList.add('hidden');
+            
+            setTimeout(() => {
+                const chatBox = document.getElementById('chat-box');
+                if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+            }, 50);
+        }
     }
 
     function toggleAuthViews(mode) {
@@ -927,7 +978,6 @@
             labelText = '🔒 Match in progress / Done (Slips Locked)';
         }
 
-        // Show remaining modification time to users if a prediction exists
         if (currentUser && dbState.users[currentUser].predictionTimes && dbState.users[currentUser].predictionTimes[fix.id] && !fix.locked && !fix.settled) {
             let initialPredictionTime = dbState.users[currentUser].predictionTimes[fix.id];
             let minutesPassed = Math.floor((Date.now() - initialPredictionTime) / 60000);
@@ -1011,16 +1061,14 @@
 
         let userObj = dbState.users[currentUser];
         
-        // 10-Minute Lock Check
         if(userObj.predictions && userObj.predictions[fixtureId]) {
             let initialTime = userObj.predictionTimes[fixtureId] || 0;
             let timeElapsed = Date.now() - initialTime;
             
-            if(timeElapsed > 600000) { // 600,000 ms = 10 minutes
+            if(timeElapsed > 600000) { 
                 return alert("Access Denied: 10 minutes have passed since your initial pick. This selection is permanently locked!");
             }
         } else {
-            // First time predicting this match, log the initial timestamp
             if(!userObj.predictionTimes) userObj.predictionTimes = {};
             userObj.predictionTimes[fixtureId] = Date.now();
         }
@@ -1167,6 +1215,10 @@
 
     function renderChat() {
         const box = document.getElementById('chat-box');
+        if(!box) return;
+
+        let shouldScroll = (box.scrollTop + box.clientHeight >= box.scrollHeight - 50);
+
         box.innerHTML = "";
         dbState.chat.forEach(msg => {
             let div = document.createElement('div');
@@ -1192,6 +1244,10 @@
             `;
             box.appendChild(div);
         });
+
+        if (shouldScroll && activeTabId === 'chat-tab') {
+            box.scrollTop = box.scrollHeight;
+        }
     }
 
     function escapeHtml(text) {
@@ -1211,6 +1267,8 @@
             let dateStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             let monthDay = new Date().toLocaleDateString([], {month: 'short', day: 'numeric'});
             dbState.chat.push({ id: Date.now(), user: currentUser, msg: text, time: `${dateStr} ${monthDay}` });
+            
+            localChatCount++;
         }
         document.getElementById('chat-input').value = "";
         pushData();
@@ -1234,6 +1292,7 @@
     function deleteChatMessage(id) {
         if(confirm("Permanently delete message?")) {
             dbState.chat = dbState.chat.filter(m => m.id !== id);
+            localChatCount = Math.max(0, localChatCount - 1);
             pushData();
         }
     }
@@ -1263,12 +1322,22 @@
         pushData();
     }
 
-    /* FEATURE: Delete a single selected match entirely from DB */
     function adminDeleteSingleFixture(matchId) {
         if(!confirm("Are you sure you want to permanently delete this single match fixture?")) return;
+        
+        let fix = dbState.fixtures.find(f => f.id === matchId);
+        if (fix && fix.settled && fix.outcome !== "NONE") {
+            for(let name in dbState.users) {
+                if(dbState.users[name].predictions && dbState.users[name].predictions[matchId] === fix.outcome) {
+                    dbState.users[name].points = Math.max(0, (dbState.users[name].points || 0) - 5);
+                    dbState.users[name].correct = Math.max(0, (dbState.users[name].correct || 0) - 1);
+                }
+            }
+        }
+        
         dbState.fixtures = dbState.fixtures.filter(f => f.id !== matchId);
         pushData();
-        alert("Match fixture successfully deleted.");
+        alert("Match fixture successfully deleted and affected points rolled back.");
     }
 
     function adminGenerateRoundRobin() {
@@ -1333,9 +1402,18 @@
     }
 
     function adminWipeFixtures() {
-        if(confirm("Wipe all matches?")) {
+        if(confirm("Wipe all matches? This will also completely reset all player prediction scores to 0!")) {
             dbState.fixtures = [];
+            
+            for(let name in dbState.users) {
+                dbState.users[name].points = 0;
+                dbState.users[name].correct = 0;
+                dbState.users[name].predictions = {};
+                dbState.users[name].predictionTimes = {};
+            }
+            
             pushData();
+            alert("All fixtures cleared and user predictor scores reset to 0.");
         }
     }
 
