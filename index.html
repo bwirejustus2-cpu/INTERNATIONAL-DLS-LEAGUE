@@ -818,468 +818,382 @@
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         
         document.getElementById(tabId).classList.add('active');
-        
-        const currentBtn = document.getElementById(`btn-${tabId}`);
-        if(currentBtn) currentBtn.classList.add('active');
-        
+        document.getElementById('btn-' + tabId).classList.add('active');
+
         if (tabId === 'chat-tab') {
             unreadChatCount = 0;
-            localChatCount = dbState.chat.length;
             const badgeEl = document.getElementById('chat-unread-badge');
-            if(badgeEl) badgeEl.classList.add('hidden');
-            
+            badgeEl.classList.add('hidden');
             setTimeout(() => {
-                const chatBox = document.getElementById('chat-box');
-                if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+                const box = document.getElementById('chat-box');
+                box.scrollTop = box.scrollHeight;
             }, 50);
         }
     }
 
-    function toggleAuthViews(mode) {
-        document.getElementById('register-username-view').classList.add('hidden');
-        document.getElementById('register-team-view').classList.add('hidden');
-        document.getElementById('recover-view').classList.add('hidden');
-        if(mode === 'recover') document.getElementById('recover-view').classList.remove('hidden');
-        else document.getElementById('register-username-view').classList.remove('hidden');
-    }
-
-    function goToTeamRegistration() {
-        let username = document.getElementById('reg-username').value.trim();
-        if(!username) return alert("Enter a valid username!");
-        if(dbState.users[username]) return alert("Username already taken!");
-        tempUsername = username;
-        document.getElementById('temp-username-display').innerText = username;
-        document.getElementById('register-username-view').classList.add('hidden');
-        document.getElementById('register-team-view').classList.remove('hidden');
-    }
-
-    function registerAsFan() {
-        let username = document.getElementById('reg-username').value.trim();
-        if(!username) return alert("Enter a valid username!");
-        if(dbState.users[username]) return alert("Username already taken!");
-
-        dbState.users[username] = {
-            pin: Math.floor(1000 + Math.random() * 9000).toString(),
-            teamName: "",
-            isFan: true,
-            points: 0,
-            correct: 0,
-            lastSeen: Date.now(),
-            predictions: {},
-            predictionTimes: {}
-        };
-        currentUser = username;
-        localStorage.setItem('dls_user', username);
-        document.getElementById('reg-username').value = "";
-        checkLocalSession();
-        pushData();
-    }
-
-    function completeRegistration() {
-        let teamName = document.getElementById('reg-teamname').value.trim();
-        if(!teamName) return alert("Please enter your team name!");
-
-        dbState.users[tempUsername] = {
-            pin: Math.floor(1000 + Math.random() * 9000).toString(),
-            teamName: teamName,
-            isFan: false,
-            points: 0,
-            correct: 0,
-            lastSeen: Date.now(),
-            predictions: {},
-            predictionTimes: {}
-        };
-        currentUser = tempUsername;
-        localStorage.setItem('dls_user', tempUsername);
-        document.getElementById('reg-username').value = "";
-        document.getElementById('reg-teamname').value = "";
-        checkLocalSession();
-        pushData();
-    }
-
-    function recoverAccount() {
-        let username = document.getElementById('rec-username').value.trim();
-        let pin = document.getElementById('rec-pin').value.trim();
-        if(!dbState.users[username] || dbState.users[username].pin !== pin) return alert("Invalid credentials!");
-        currentUser = username;
-        localStorage.setItem('dls_user', username);
-        dbState.users[currentUser].lastSeen = Date.now();
-        checkLocalSession();
-        pushData();
-    }
-
-    function logout() {
-        if (currentUser && dbState.users[currentUser]) dbState.users[currentUser].lastSeen = 0;
-        localStorage.removeItem('dls_user');
-        currentUser = null;
-        document.getElementById('welcome-view').classList.add('hidden');
-        document.getElementById('register-username-view').classList.remove('hidden');
-        pushData();
-    }
-
     function checkLocalSession() {
-        if(currentUser) {
+        const authPanel = document.getElementById('auth-panel');
+        if (currentUser) {
             document.getElementById('register-username-view').classList.add('hidden');
             document.getElementById('register-team-view').classList.add('hidden');
             document.getElementById('recover-view').classList.add('hidden');
             document.getElementById('welcome-view').classList.remove('hidden');
             document.getElementById('active-user').innerText = currentUser;
+        } else {
+            document.getElementById('register-username-view').classList.remove('hidden');
+            document.getElementById('welcome-view').classList.add('hidden');
         }
+    }
+
+    function toggleAuthViews(target) {
+        document.getElementById('register-username-view').classList.add('hidden');
+        document.getElementById('register-team-view').classList.add('hidden');
+        document.getElementById('recover-view').classList.add('hidden');
+
+        if (target === 'recover') {
+            document.getElementById('recover-view').classList.remove('hidden');
+        } else if (target === 'register') {
+            document.getElementById('register-username-view').classList.remove('hidden');
+        }
+    }
+
+    function goToTeamRegistration() {
+        const nameInput = document.getElementById('reg-username').value.trim();
+        if (!nameInput) return alert("Please type a valid username first.");
+        if (dbState.users[nameInput]) return alert("Username taken! Try recovering or picking another.");
+
+        tempUsername = nameInput;
+        document.getElementById('temp-username-display').innerText = tempUsername;
+        document.getElementById('register-username-view').classList.add('hidden');
+        document.getElementById('register-team-view').classList.remove('hidden');
+    }
+
+    function registerAsFan() {
+        const nameInput = document.getElementById('reg-username').value.trim();
+        if (!nameInput) return alert("Please type a valid username first.");
+        if (dbState.users[nameInput]) return alert("Username taken!");
+
+        dbState.users[nameInput] = {
+            teamName: "Fan Mode",
+            pin: Math.floor(1000 + Math.random() * 9000).toString(),
+            isFan: true,
+            predictions: {},
+            predictionTimes: {},
+            lastSeen: Date.now()
+        };
+
+        currentUser = nameInput;
+        localStorage.setItem('dls_user', currentUser);
+        checkLocalSession();
+        pushData();
+    }
+
+    function completeRegistration() {
+        const teamInput = document.getElementById('reg-teamname').value.trim();
+        if (!teamInput) return alert("Type your official match club name.");
+
+        dbState.users[tempUsername] = {
+            teamName: teamInput,
+            pin: Math.floor(1000 + Math.random() * 9000).toString(),
+            isFan: false,
+            predictions: {},
+            predictionTimes: {},
+            lastSeen: Date.now()
+        };
+
+        currentUser = tempUsername;
+        localStorage.setItem('dls_user', currentUser);
+        checkLocalSession();
+        pushData();
+    }
+
+    function recoverAccount() {
+        const name = document.getElementById('rec-username').value.trim();
+        const pin = document.getElementById('rec-pin').value.trim();
+
+        if (dbState.users[name] && dbState.users[name].pin === pin) {
+            currentUser = name;
+            localStorage.setItem('dls_user', currentUser);
+            checkLocalSession();
+            renderUI();
+            alert("Welcome back!");
+        } else {
+            alert("Wrong credentials profile mapping.");
+        }
+    }
+
+    function logout() {
+        if(currentUser && dbState.users[currentUser]) {
+            dbState.users[currentUser].lastSeen = 0;
+        }
+        localStorage.removeItem('dls_user');
+        currentUser = null;
+        checkLocalSession();
+        pushData();
+    }
+
+    function makePrediction(matchId, outcome) {
+        if (!currentUser) return alert("Create an account identity profile first!");
+        
+        const match = dbState.fixtures.find(f => f.id === matchId);
+        if (!match || match.settled || match.locked) return alert("Slip is fully locked.");
+
+        const userObj = dbState.users[currentUser];
+        userObj.predictions[matchId] = outcome;
+        userObj.predictionTimes[matchId] = Date.now();
+
+        pushData();
     }
 
     function renderFixtures() {
         const container = document.getElementById('fixtures-list');
         container.innerHTML = "";
 
-        if(dbState.fixtures.length === 0) {
-            container.innerHTML = "<p style='color:var(--text-muted); font-style:italic;'>No match fixtures listed yet.</p>";
+        const targetMatches = dbState.fixtures.filter(f => f.matchday === globalUserMatchdayView);
+
+        if (targetMatches.length === 0) {
+            container.innerHTML = `<p style="text-align:center; font-style:italic; padding: 20px; color:var(--text-muted)">No match events built on Day ${globalUserMatchdayView} yet.</p>`;
             return;
         }
 
-        const activeMatches = dbState.fixtures.filter(f => f.matchday === 0 || f.matchday === globalUserMatchdayView);
+        targetMatches.forEach(m => {
+            let isSlipLocked = m.settled || m.locked;
+            let userPick = (currentUser && dbState.users[currentUser].predictions) ? dbState.users[currentUser].predictions[m.id] : null;
+            let userPickTime = (currentUser && dbState.users[currentUser].predictionTimes) ? dbState.users[currentUser].predictionTimes[m.id] : null;
 
-        if (activeMatches.length === 0) {
-            container.innerHTML = `<p style='color:var(--text-muted); font-style:italic;'>No games scheduled for Matchday ${globalUserMatchdayView}.</p>`;
-            return;
-        }
+            if (userPickTime && (Date.now() - userPickTime > 600000)) {
+                isSlipLocked = true; 
+            }
 
-        let manualGroup = activeMatches.filter(f => f.matchday === 0);
-        let scheduledGroup = activeMatches.filter(f => f.matchday === globalUserMatchdayView);
+            let wrapper = document.createElement('div');
+            wrapper.className = "prediction-wrapper";
 
-        if (manualGroup.length > 0) {
-            container.insertAdjacentHTML('beforeend', `<div class="matchday-header" style="background:var(--accent-blue)">⚡ SPECIAL STANDALONE MATCHES</div>`);
-            manualGroup.forEach(fix => buildFixtureNode(fix, container));
-        }
+            let displayScore = m.settled ? `<b style="font-size:18px; color:var(--accent-purple)">${m.homeScore} - ${m.awayScore}</b>` : `<span style="font-size:12px; color:var(--text-muted); background:#e2e8f0; padding:3px 8px; border-radius:4px;">VS</span>`;
+            if (m.settled && m.isNA) displayScore = `<span style="color:#ef4444; font-weight:bold;">[N/A Void]</span>`;
 
-        if (scheduledGroup.length > 0) {
-            container.insertAdjacentHTML('beforeend', `<div class="matchday-header">📅 COMPETITION MATCHDAY ${globalUserMatchdayView}</div>`);
-            scheduledGroup.forEach(fix => buildFixtureNode(fix, container));
-        }
-    }
+            let lockBadge = isSlipLocked ? "🔒 Locked" : "⏳ Active Pick";
 
-    function buildFixtureNode(fix, targetContainer) {
-        let userSelection = (currentUser && dbState.users[currentUser]?.predictions) ? dbState.users[currentUser].predictions[fix.id] : null;
-        let isLocked = fix.locked;
+            wrapper.innerHTML = `
+                <div class="prediction-row">
+                    <span style="font-size:15px; font-weight:700; max-width:35%;">⚽ ${m.home}</span>
+                    <div style="text-align:center;">
+                        <div>${displayScore}</div>
+                        <span style="font-size:10px; font-weight:bold; color:var(--text-muted);">${lockBadge}</span>
+                    </div>
+                    <span style="font-size:15px; font-weight:700; text-align:right; max-width:35%;">⚽ ${m.away}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div class="btn-group">
+                        <button class="predict-btn ${userPick === '1' ? 'selected' : ''}" ${isSlipLocked ? 'disabled' : ''} onclick="makePrediction(${m.id}, '1')">1</button>
+                        <button class="predict-btn ${userPick === 'X' ? 'selected' : ''}" ${isSlipLocked ? 'disabled' : ''} onclick="makePrediction(${m.id}, 'X')">X</button>
+                        <button class="predict-btn ${userPick === '2' ? 'selected' : ''}" ${isSlipLocked ? 'disabled' : ''} onclick="makePrediction(${m.id}, '2')">2</button>
+                    </div>
+                    <div style="flex-grow:1; max-width:320px;">
+                        <div class="match-comments-section">
+                            <div class="match-comments-list" id="comments-${m.id}"></div>
+                            <div style="display:flex; gap:4px;">
+                                <input type="text" id="input-comment-${m.id}" placeholder="Live commentary thread..." style="font-size:11px; padding:6px; flex-grow:1;">
+                                <button class="btn-success" style="padding:6px 10px; font-size:11px; background:var(--accent-blue);" onclick="addMatchComment(${m.id})">Send</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(wrapper);
 
-        let playerTeam = (currentUser && dbState.users[currentUser]) ? dbState.users[currentUser].teamName : "";
-        
-        let isMatchPlayer = false;
-        if (playerTeam && !dbState.users[currentUser].isFan) {
-            isMatchPlayer = (playerTeam.toLowerCase() === fix.home.toLowerCase() || playerTeam.toLowerCase() === fix.away.toLowerCase());
-        }
-
-        let wrapper = document.createElement('div');
-        wrapper.className = "prediction-wrapper";
-
-        let labelText = '⌛ Predictions Awaiting Kick-off';
-        if (fix.settled) {
-            labelText = `Final Score: ${fix.score}`;
-        } else if (fix.locked) {
-            labelText = '🔒 Match in progress / Done (Slips Locked)';
-        }
-
-        if (currentUser && dbState.users[currentUser].predictionTimes && dbState.users[currentUser].predictionTimes[fix.id] && !fix.locked && !fix.settled) {
-            let initialPredictionTime = dbState.users[currentUser].predictionTimes[fix.id];
-            let minutesPassed = Math.floor((Date.now() - initialPredictionTime) / 60000);
-            let timeRemaining = 10 - minutesPassed;
-            if (timeRemaining > 0) {
-                labelText += ` | ⏳ Edit locks in ${timeRemaining}m`;
+            const listEl = document.getElementById(`comments-${m.id}`);
+            if(m.comments && m.comments.length > 0) {
+                m.comments.forEach(c => {
+                    let cItem = document.createElement('div');
+                    cItem.className = "match-comment-item";
+                    cItem.innerHTML = `<span><b>${c.user}:</b> ${c.text}</span>`;
+                    listEl.appendChild(cItem);
+                });
+                listEl.scrollTop = listEl.scrollHeight;
             } else {
-                labelText += ` | 🔒 Edit window closed (10m expired)`;
+                listEl.innerHTML = `<p style="font-size:11px; color:#94a3b8; margin:5px 0; font-style:italic;">No commentary notes shared yet.</p>`;
             }
-        }
-
-        let row = document.createElement('div');
-        row.className = "prediction-row";
-        row.innerHTML = `
-            <div>
-                <span style="font-size: 16px; font-weight:bold;">${fix.home} vs ${fix.away}</span>
-                <br><span style="font-size:12px; color:var(--text-muted);">${labelText}</span>
-            </div>
-            <div class="btn-group">
-                <button class="predict-btn ${userSelection === '1' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '1')">1</button>
-                <button class="predict-btn ${userSelection === 'X' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, 'X')">X</button>
-                <button class="predict-btn ${userSelection === '2' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '2')">2</button>
-            </div>
-        `;
-        wrapper.appendChild(row);
-
-        let actionRow = document.createElement('div');
-        actionRow.className = "match-action-row";
-        
-        let doneBtnText = '✔️ Mark Match as Done';
-        let doneBtnDisabled = false;
-
-        if (isLocked) {
-            doneBtnText = '🔒 Slip Closed';
-            doneBtnDisabled = true;
-        } else if (!isMatchPlayer) {
-            doneBtnText = '👀 Spectator View';
-            doneBtnDisabled = true;
-        }
-
-        actionRow.innerHTML = `
-            <button class="done-btn" ${doneBtnDisabled ? 'disabled' : ''} onclick="markMatchAsDone(${fix.id})">
-                ${doneBtnText}
-            </button>
-        `;
-        wrapper.appendChild(actionRow);
-
-        let commentsBox = document.createElement('div');
-        commentsBox.className = "match-comments-section";
-        
-        let commentsListHtml = "";
-        if(fix.comments && fix.comments.length > 0) {
-            fix.comments.forEach(c => {
-                let deleteBtn = isAdmin ? `<span style="color:#ff3b3b; cursor:pointer; font-weight:bold; margin-left:8px;" onclick="deleteMatchComment(${fix.id}, ${c.id})">❌</span>` : '';
-                commentsListHtml += `
-                    <div class="match-comment-item">
-                        <span><b>${c.user}:</b> ${c.text}</span>
-                        <span style="font-size:10px; color:var(--text-muted);">${c.time} ${deleteBtn}</span>
-                    </div>`;
-            });
-        } else {
-            commentsListHtml = `<p style="font-size:11px; color:var(--text-muted); margin:4px; font-style:italic;">No comments yet. Write an analysis!</p>`;
-        }
-
-        commentsBox.innerHTML = `
-            <div class="match-comments-list">${commentsListHtml}</div>
-            <div style="display:flex; gap:6px;">
-                <input type="text" id="input-comment-${fix.id}" placeholder="Write match comment..." style="flex-grow:1; padding:6px; font-size:12px;">
-                <button class="btn-success" style="padding:6px 12px; font-size:12px; background:var(--accent-blue);" onclick="addMatchComment(${fix.id})">Comment</button>
-            </div>
-        `;
-        wrapper.appendChild(commentsBox);
-        targetContainer.appendChild(wrapper);
+        });
     }
 
-    function submitPrediction(fixtureId, selection) {
-        if(!currentUser) return alert("Register or login to pick slips!");
-        
-        let fix = dbState.fixtures.find(f => f.id === fixtureId);
-        if(fix && fix.locked) return alert("This match is locked. Slips cannot be edited!");
+    function addMatchComment(matchId) {
+        if (!currentUser) return alert("Log in to comment.");
+        const input = document.getElementById(`input-comment-${matchId}`);
+        const text = input.value.trim();
+        if (!text) return;
 
-        let userObj = dbState.users[currentUser];
+        const match = dbState.fixtures.find(f => f.id === matchId);
+        if (!match.comments) match.comments = [];
         
-        if(userObj.predictions && userObj.predictions[fixtureId]) {
-            let initialTime = userObj.predictionTimes[fixtureId] || 0;
-            let timeElapsed = Date.now() - initialTime;
-            
-            if(timeElapsed > 600000) { 
-                return alert("Access Denied: 10 minutes have passed since your initial pick. This selection is permanently locked!");
-            }
-        } else {
-            if(!userObj.predictionTimes) userObj.predictionTimes = {};
-            userObj.predictionTimes[fixtureId] = Date.now();
-        }
+        match.comments.push({
+            user: currentUser,
+            text: text
+        });
 
-        userObj.predictions[fixtureId] = selection;
-        renderFixtures();
+        input.value = "";
         pushData();
-    }
-
-    function markMatchAsDone(fixtureId) {
-        if(!currentUser) return alert("Log in to verify match completion status!");
-        
-        let fix = dbState.fixtures.find(f => f.id === fixtureId);
-        if(!fix) return;
-
-        let playerTeam = dbState.users[currentUser]?.teamName || "";
-        
-        if (!playerTeam || (playerTeam.toLowerCase() !== fix.home.toLowerCase() && playerTeam.toLowerCase() !== fix.away.toLowerCase())) {
-            return alert("Access Denied: Only the specific teams assigned to this fixture can declare it done!");
-        }
-
-        if(!confirm("Are you sure this match is complete? Clicking OK locks all prediction fields instantly!")) return;
-        
-        fix.locked = true; 
-        pushData();
-        alert("Success! The match has been locked out from predictions.");
-    }
-
-    function addMatchComment(fixtureId) {
-        if(!currentUser) return alert("Log in to post match comments!");
-        let inputEl = document.getElementById(`input-comment-${fixtureId}`);
-        let txt = inputEl.value.trim();
-        if(!txt) return;
-
-        let fix = dbState.fixtures.find(f => f.id === fixtureId);
-        if(!fix.comments) fix.comments = [];
-        
-        let timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        fix.comments.push({ id: Date.now(), user: currentUser, text: txt, time: timeStr });
-        inputEl.value = "";
-        pushData();
-    }
-
-    function deleteMatchComment(fixtureId, commentId) {
-        let fix = dbState.fixtures.find(f => f.id === fixtureId);
-        if(fix && fix.comments) {
-            fix.comments = fix.comments.filter(c => c.id !== commentId);
-            pushData();
-        }
     }
 
     function renderStandings() {
-        const tbody = document.querySelector('#league-table tbody');
-        tbody.innerHTML = "";
-        
-        let tableMap = {};
+        let standings = {};
 
-        for (let user in dbState.users) {
-            if (dbState.users[user].isFan) continue;
-            let tName = dbState.users[user].teamName;
-            if (tName && !tableMap[tName.toLowerCase()]) {
-                tableMap[tName.toLowerCase()] = { name: tName, p: 0, w: 0, d: 0, l: 0, gd: 0, pts: 0 };
+        for (let name in dbState.users) {
+            let u = dbState.users[name];
+            if (!u.isFan && u.teamName && u.teamName !== "Fan Mode") {
+                standings[u.teamName] = { name: u.teamName, p:0, w:0, d:0, l:0, gd:0, pts:0 };
             }
         }
 
-        dbState.fixtures.forEach(fix => {
-            if(!fix.settled || !fix.score) return;
+        dbState.fixtures.forEach(f => {
+            if (!f.settled || f.isNA) return;
+            
+            if (!standings[f.home]) standings[f.home] = { name: f.home, p:0, w:0, d:0, l:0, gd:0, pts:0 };
+            if (!standings[f.away]) standings[f.away] = { name: f.away, p:0, w:0, d:0, l:0, gd:0, pts:0 };
 
-            let hKey = fix.home.toLowerCase();
-            let aKey = fix.away.toLowerCase();
+            let h = standings[f.home];
+            let a = standings[f.away];
 
-            if(!tableMap[hKey]) tableMap[hKey] = { name: fix.home, p: 0, w: 0, d: 0, l: 0, gd: 0, pts: 0 };
-            if(!tableMap[aKey]) tableMap[aKey] = { name: fix.away, p: 0, w: 0, d: 0, l: 0, gd: 0, pts: 0 };
+            h.p++;
+            a.p++;
 
-            tableMap[hKey].p += 1;
-            tableMap[aKey].p += 1;
+            let hs = parseInt(f.homeScore) || 0;
+            let as = parseInt(f.awayScore) || 0;
 
-            if (fix.score === "N/A") return;
+            h.gd += (hs - as);
+            a.gd += (as - hs);
 
-            let scores = fix.score.split('-');
-            let hG = parseInt(scores[0]);
-            let aG = parseInt(scores[1]);
-
-            tableMap[hKey].gd += (hG - aG);
-            tableMap[aKey].gd += (aG - hG);
-
-            if(hG > aG) {
-                tableMap[hKey].w += 1; tableMap[hKey].pts += 3;
-                tableMap[aKey].l += 1;
-            } else if (aG > hG) {
-                tableMap[aKey].w += 1; tableMap[aKey].pts += 3;
-                tableMap[hKey].l += 1;
+            if (hs > as) {
+                h.w++; h.pts += 3;
+                a.l++;
+            } else if (as > hs) {
+                a.w++; a.pts += 3;
+                h.l++;
             } else {
-                tableMap[hKey].d += 1; tableMap[hKey].pts += 1;
-                tableMap[aKey].d += 1; tableMap[aKey].pts += 1;
+                h.d++; h.pts += 1;
+                a.d++; a.pts += 1;
             }
         });
 
-        let cleanArr = Object.values(tableMap).sort((a,b) => b.pts - a.pts || b.gd - a.gd);
+        let sortedTeams = Object.values(standings).sort((x, y) => y.pts - x.pts || y.gd - x.gd);
+        const tBody = document.querySelector('#league-table tbody');
+        tBody.innerHTML = "";
+        
+        sortedTeams.forEach((t, idx) => {
+            let row = document.createElement('tr');
+            row.innerHTML = `<td><b>${idx+1}</b></td> <td><b>${t.name}</b></td> <td>${t.p}</td> <td>${t.w}</td> <td>${t.d}</td> <td>${t.l}</td> <td>${t.gd > 0 ? '+' + t.gd : t.gd}</td> <td style="color:var(--accent-blue); font-weight:bold;">${t.pts}</td>`;
+            tBody.appendChild(row);
+        });
 
-        if (cleanArr.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No teams operating on table grid yet.</td></tr>`;
-        } else {
-            cleanArr.forEach((team, idx) => {
-                let r = document.createElement('tr');
-                r.innerHTML = `
-                    <td style="font-weight: bold; color: var(--text-muted); text-align: center;">${idx + 1}</td>
-                    <td><b>${team.name}</b></td>
-                    <td>${team.p}</td>
-                    <td>${team.w}</td>
-                    <td>${team.d}</td>
-                    <td>${team.l}</td>
-                    <td>${team.gd > 0 ? '+' + team.gd : team.gd}</td>
-                    <td style="color:var(--accent-blue)"><b>${team.pts}</b></td>`;
-                tbody.appendChild(r);
-            });
+        let predictorList = [];
+        for (let name in dbState.users) {
+            let u = dbState.users[name];
+            let score = 0;
+            let correctCount = 0;
+
+            for (let matchId in u.predictions) {
+                let match = dbState.fixtures.find(f => f.id == matchId);
+                if (match && match.settled && !match.isNA) {
+                    let actualOutcome = 'X';
+                    let hs = parseInt(match.homeScore);
+                    let as = parseInt(match.awayScore);
+                    if (hs > as) actualOutcome = '1';
+                    if (as > hs) actualOutcome = '2';
+
+                    if (u.predictions[matchId] === actualOutcome) {
+                        score += 5;
+                        correctCount++;
+                    }
+                }
+            }
+            predictorList.push({ username: name, role: u.isFan ? "📢 Fan Room" : `⚽ ${u.teamName}`, correct: correctCount, points: score });
         }
 
-        const pTbody = document.querySelector('#predictor-table tbody');
-        pTbody.innerHTML = "";
-
-        let pUsers = [];
-        for(let name in dbState.users) {
-            pUsers.push({ name: name, ...dbState.users[name] });
-        }
-        pUsers.sort((a,b) => b.points - a.points);
-
-        if (pUsers.length === 0) {
-            pTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No users found.</td></tr>`;
-        } else {
-            pUsers.forEach((u, index) => {
-                let roleDisplay = u.isFan ? `<i style="color:var(--accent-purple)">📢 Fan</i>` : `<span style="color:var(--accent-orange); font-weight:bold;">${u.teamName}</span>`;
-                let r = document.createElement('tr');
-                r.innerHTML = `
-                    <td style="font-weight: bold; color: var(--text-muted); text-align: center;">${index + 1}</td>
-                    <td>👤 <b>${u.name}</b></td>
-                    <td>${roleDisplay}</td>
-                    <td>${u.correct || 0}</td>
-                    <td style="color:var(--accent-green); font-weight:bold;">${u.points || 0} pts</td>`;
-                pTbody.appendChild(r);
-            });
-        }
+        predictorList.sort((x, y) => y.points - x.points);
+        const pBody = document.querySelector('#predictor-table tbody');
+        pBody.innerHTML = "";
+        
+        predictorList.forEach((p, idx) => {
+            let row = document.createElement('tr');
+            row.innerHTML = `<td>${idx+1}</td> <td><b>${p.username}</b></td> <td>${p.role}</td> <td>🟢 ${p.correct}</td> <td style="font-weight:900; color:var(--accent-green);">${p.points} Pts</td>`;
+            pBody.appendChild(row);
+        });
     }
 
     function renderChat() {
         const box = document.getElementById('chat-box');
-        if(!box) return;
-
-        let shouldScroll = (box.scrollTop + box.clientHeight >= box.scrollHeight - 50);
+        let initialScrollHeight = box.scrollHeight;
+        let isAtBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
 
         box.innerHTML = "";
+
+        if (dbState.chat.length === 0) {
+            box.innerHTML = `<p style="color:var(--text-muted); font-style:italic; text-align:center; padding-top:40px;">Welcome to the Fan Room Chat Chamber! Be standard and kind.</p>`;
+            return;
+        }
+
         dbState.chat.forEach(msg => {
-            let div = document.createElement('div');
-            div.className = "chat-msg";
+            let wrapper = document.createElement('div');
+            wrapper.className = "chat-msg";
 
-            let actionButtons = "";
-            if (currentUser && msg.user === currentUser) {
-                actionButtons += `<button onclick="initiateEditChat(${msg.id}, '${escapeHtml(msg.msg)}')">📝 Edit</button>`;
+            let actionBlock = "";
+            if (currentUser === msg.user) {
+                actionBlock = `
+                    <div class="chat-actions">
+                        <button onclick="enterEditMode('${msg.id}', \`${msg.text.replace(/"/g, '&quot;')}\`)">Edit</button>
+                        <button class="btn-delete-chat" onclick="deleteChat('${msg.id}')">Remove</button>
+                    </div>
+                `;
             }
-            if (isAdmin) {
-                actionButtons += `<button class="btn-delete-chat" onclick="deleteChatMessage(${msg.id})">❌ Delete</button>`;
-            }
 
-            let isUserFan = dbState.users[msg.user]?.isFan || false;
-            let fanTag = isUserFan ? ` <span style="font-size:10px; background:rgba(136,0,255,0.1); color:var(--accent-purple); padding:2px 6px; border-radius:10px; margin-left:4px;">FAN</span>` : "";
-
-            div.innerHTML = `
+            wrapper.innerHTML = `
                 <div class="chat-header">
-                    <div><span class="chat-username"><b>${msg.user}</b></span>${fanTag}${msg.edited ? `<span style="font-size:10px; font-style:italic; color:var(--text-muted); margin-left:5px;">(edited)</span>` : ''}</div>
-                    <div style="display: flex; align-items: center; gap: 10px;"><span>${msg.time}</span><div class="chat-actions">${actionButtons}</div></div>
+                    <span class="chat-username">${msg.user}</span>
+                    <div style="display:flex; align-items:center;">
+                        <span style="font-size:10px; color:#94a3b8; margin-right:5px;">${msg.time || ''}</span>
+                        ${actionBlock}
+                    </div>
                 </div>
-                <div style="margin-top:5px; word-break: break-word;">${msg.msg}</div>
+                <div style="word-break: break-word; font-size:14px; margin-top:4px;">${msg.text}</div>
             `;
-            box.appendChild(div);
+            box.appendChild(wrapper);
         });
 
-        if (shouldScroll && activeTabId === 'chat-tab') {
+        if (isAtBottom || box.scrollHeight > initialScrollHeight) {
             box.scrollTop = box.scrollHeight;
         }
     }
 
-    function escapeHtml(text) {
-        return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    }
-
     function sendChat() {
-        if(!currentUser) return alert("Log in to join chat rooms!");
-        let text = document.getElementById('chat-input').value.trim();
-        if(!text) return;
+        if (!currentUser) return alert("Log in to contribute to the Fan Zone.");
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if (!text) return;
 
         if (editChatId !== null) {
-            let messageObj = dbState.chat.find(m => m.id === editChatId);
-            if (messageObj) { messageObj.msg = text; messageObj.edited = true; }
+            let targetMsg = dbState.chat.find(m => m.id === editChatId);
+            if (targetMsg && targetMsg.user === currentUser) {
+                targetMsg.text = text + " (edited)";
+            }
             cancelEditMode();
         } else {
-            let dateStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            let monthDay = new Date().toLocaleDateString([], {month: 'short', day: 'numeric'});
-            dbState.chat.push({ id: Date.now(), user: currentUser, msg: text, time: `${dateStr} ${monthDay}` });
-            
-            localChatCount++;
+            let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            dbState.chat.push({
+                id: 'msg-' + Date.now(),
+                user: currentUser,
+                text: text,
+                time: timeStr
+            });
         }
-        document.getElementById('chat-input').value = "";
+
+        input.value = "";
         pushData();
     }
 
-    function initiateEditChat(id, currentText) {
-        editChatId = id;
+    function enterEditMode(msgId, currentText) {
+        editChatId = msgId;
         document.getElementById('chat-input').value = currentText;
         document.getElementById('edit-indicator').classList.remove('hidden');
-        document.getElementById('chat-submit-btn').innerText = "Save Update";
-        document.getElementById('chat-input').focus();
+        document.getElementById('chat-submit-btn').innerText = "Update";
     }
 
     function cancelEditMode() {
@@ -1289,281 +1203,260 @@
         document.getElementById('chat-submit-btn').innerText = "Post";
     }
 
-    function deleteChatMessage(id) {
-        if(confirm("Permanently delete message?")) {
-            dbState.chat = dbState.chat.filter(m => m.id !== id);
-            localChatCount = Math.max(0, localChatCount - 1);
-            pushData();
-        }
+    function deleteChat(msgId) {
+        if (!confirm("Confirm deleting this thread?")) return;
+        dbState.chat = dbState.chat.filter(m => m.id !== msgId);
+        pushData();
     }
 
     function verifyAdmin() {
-        if(document.getElementById('admin-pass').value === "admin123") { 
+        const pass = document.getElementById('admin-pass').value;
+        if (pass === "DLSADMIN2026") {
             isAdmin = true;
             document.getElementById('admin-login-box').classList.add('hidden');
             document.getElementById('admin-controls').classList.remove('hidden');
-            renderUI();
+            renderAdminPanel();
         } else {
-            alert("Wrong credentials entry!");
+            alert("Unauthorized panel code access!");
+        }
+    }
+
+    function renderAdminPanel() {
+        if (!isAdmin) return;
+        const list = document.getElementById('admin-fixtures-list');
+        list.innerHTML = "";
+
+        const maxMatchday = Math.max(...dbState.fixtures.map(f => f.matchday || 0), 1);
+        
+        let matchdaySelectorHTML = `
+            <div style="margin-bottom: 15px; background: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color)">
+                <label style="font-weight: bold; font-size: 13px; margin-right: 10px;">Select Admin Matchday Filter:</label>
+                <select id="admin-matchday-filter-select" onchange="selectedAdminMatchdayView = parseInt(this.value); renderAdminPanel();" style="padding: 4px 8px;">
+        `;
+        for (let i = 1; i <= maxMatchday; i++) {
+            let sel = (i === selectedAdminMatchdayView) ? "selected" : "";
+            matchdaySelectorHTML += `<option value="${i}" ${sel}>Matchday ${i}</option>`;
+        }
+        matchdaySelectorHTML += `</select></div>`;
+        
+        let tempDiv = document.createElement('div');
+        tempDiv.innerHTML = matchdaySelectorHTML;
+        list.appendChild(tempDiv);
+
+        const targetedAdminMatches = dbState.fixtures.filter(f => f.matchday === selectedAdminMatchdayView);
+
+        targetedAdminMatches.forEach(m => {
+            let row = document.createElement('div');
+            row.style.background = "#ffffff";
+            row.style.padding = "15px";
+            row.style.border = "1px solid #cbd5e1";
+            row.style.borderRadius = "8px";
+            row.style.marginBottom = "10px";
+
+            let hScoreVal = m.homeScore !== undefined ? m.homeScore : "";
+            let aScoreVal = m.awayScore !== undefined ? m.awayScore : "";
+
+            row.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; font-weight:bold; margin-bottom:8px;">
+                    <span>[M-${m.matchday}] ${m.home} vs ${m.away}</span>
+                    <span style="color:${m.settled ? 'green' : 'orange'}">${m.settled ? 'Settled' : 'Open'}</span>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input type="text" id="score-h-${m.id}" value="${hScoreVal}" placeholder="Home Gls" style="width:70px; padding:6px;">
+                    <input type="text" id="score-a-${m.id}" value="${aScoreVal}" placeholder="Away Gls" style="width:70px; padding:6px;">
+                    <button class="btn-success" style="padding:6px 12px; font-size:12px; background:var(--accent-blue);" onclick="adminSaveScore(${m.id}, false)">Settle Match</button>
+                    <button class="btn-success" style="padding:6px 12px; font-size:12px; background:#64748b;" onclick="adminSaveScore(${m.id}, true)">Mark Void N/A</button>
+                    <button class="done-btn" ${m.locked ? 'disabled' : ''} onclick="adminLockMatch(${m.id})">${m.locked ? 'Locked' : 'Lock Picks'}</button>
+                    <button style="background:#ff3b3b; color:white; padding:6px 10px; font-size:12px;" onclick="adminDeleteMatch(${m.id})">Remove</button>
+                </div>
+            `;
+            list.appendChild(row);
+        });
+
+        const userTableBody = document.querySelector('#admin-user-table tbody');
+        userTableBody.innerHTML = "";
+        for (let name in dbState.users) {
+            let u = dbState.users[name];
+            let uRow = document.createElement('tr');
+            uRow.innerHTML = `
+                <td><b>${name}</b></td>
+                <td>${u.isFan ? '📢 Fan Profile' : `⚽ ${u.teamName}`}</td>
+                <td><code style="font-size:14px; color:var(--accent-orange); font-weight:bold;">${u.pin}</code></td>
+                <td><button style="background:rgba(255,59,59,0.1); color:#ff3b3b; padding:4px 8px; font-size:11px;" onclick="adminPurgeUser('${name}')">Wipe Profile</button></td>
+            `;
+            userTableBody.appendChild(uRow);
         }
     }
 
     function adminAddFixture() {
-        let home = document.getElementById('new-home').value.trim();
-        let away = document.getElementById('new-away').value.trim();
-        if(!home || !away) return alert("Fill fields!");
+        const h = document.getElementById('new-home').value.trim();
+        const a = document.getElementById('new-away').value.trim();
+        if (!h || !a) return alert("Fill out both club fields.");
 
         dbState.fixtures.push({
-            id: Date.now(), home: home, away: away, locked: false, settled: false,
-            score: "", outcome: "", matchday: 0, comments: []
+            id: Date.now(),
+            matchday: selectedAdminMatchdayView || 1,
+            home: h,
+            away: a,
+            homeScore: "",
+            awayScore: "",
+            settled: false,
+            locked: false,
+            isNA: false,
+            comments: []
         });
+
         document.getElementById('new-home').value = "";
         document.getElementById('new-away').value = "";
         pushData();
     }
 
-    function adminDeleteSingleFixture(matchId) {
-        if(!confirm("Are you sure you want to permanently delete this single match fixture?")) return;
-        
-        let fix = dbState.fixtures.find(f => f.id === matchId);
-        if (fix && fix.settled && fix.outcome !== "NONE") {
-            for(let name in dbState.users) {
-                if(dbState.users[name].predictions && dbState.users[name].predictions[matchId] === fix.outcome) {
-                    dbState.users[name].points = Math.max(0, (dbState.users[name].points || 0) - 5);
-                    dbState.users[name].correct = Math.max(0, (dbState.users[name].correct || 0) - 1);
-                }
-            }
+    function adminSaveScore(matchId, isVoidNA) {
+        const match = dbState.fixtures.find(f => f.id === matchId);
+        if (!match) return;
+
+        if (isVoidNA) {
+            match.settled = true;
+            match.locked = true;
+            match.isNA = true;
+            match.homeScore = "N/A";
+            match.awayScore = "N/A";
+        } else {
+            const hVal = document.getElementById(`score-h-${matchId}`).value.trim();
+            const aVal = document.getElementById(`score-a-${matchId}`).value.trim();
+            if (hVal === "" || aVal === "") return alert("Input goals count first.");
+
+            match.homeScore = hVal;
+            match.awayScore = aVal;
+            match.settled = true;
+            match.locked = true;
+            match.isNA = false;
         }
-        
+
+        pushData();
+    }
+
+    function adminLockMatch(matchId) {
+        const match = dbState.fixtures.find(f => f.id === matchId);
+        if(match) {
+            match.locked = true;
+            pushData();
+        }
+    }
+
+    function adminDeleteMatch(matchId) {
+        if (!confirm("Remove this match fully from backend timeline?")) return;
         dbState.fixtures = dbState.fixtures.filter(f => f.id !== matchId);
         pushData();
-        alert("Match fixture successfully deleted and affected points rolled back.");
+    }
+
+    function adminPurgeUser(username) {
+        if (!confirm(`Permanently drop user ${username} from directory data?`)) return;
+        delete dbState.users[username];
+        if (currentUser === username) {
+            localStorage.removeItem('dls_user');
+            currentUser = null;
+            checkLocalSession();
+        }
+        pushData();
+    }
+
+    function adminWipeFixtures() {
+        if (!confirm("⚠️ Danger Area! Wipe out every match item permanently?")) return;
+        dbState.fixtures = [];
+        pushData();
     }
 
     function adminGenerateRoundRobin() {
         let teams = [];
-        let observed = new Set();
-
-        for (let user in dbState.users) {
-            if(dbState.users[user].isFan) continue;
-            let tName = dbState.users[user].teamName;
-            if(tName && !observed.has(tName.toLowerCase())) {
-                observed.add(tName.toLowerCase());
-                teams.push(tName);
+        for (let name in dbState.users) {
+            let u = dbState.users[name];
+            if (!u.isFan && u.teamName && u.teamName !== "Fan Mode") {
+                if (!teams.includes(u.teamName)) teams.push(u.teamName);
             }
         }
 
-        if(teams.length < 2) return alert("You need at least 2 registered teams!");
-        if(!confirm(`Generate Home/Away loops for ${teams.length} teams?`)) return;
+        if (teams.length < 2) {
+            return alert("You need at least 2 registered participant profiles with clubs to compute a schedule.");
+        }
 
-        if (teams.length % 2 !== 0) teams.push("BYE");
+        if (teams.length % 2 !== 0) {
+            teams.push("BYE ROOM"); 
+        }
 
-        let numTeams = teams.length;
-        let totalRounds = numTeams - 1;
-        let matchesPerRound = numTeams / 2;
-        let scheduledFixtures = [];
-        let baseTime = Date.now();
+        let totalTeams = teams.length;
+        let rounds = totalTeams - 1;
+        let matchesPerRound = totalTeams / 2;
+        let generatedFixtures = [];
+        let baseId = Date.now();
 
-        for (let round = 0; round < totalRounds; round++) {
+        for (let round = 0; round < rounds; round++) {
             let matchdayNumber = round + 1;
             for (let match = 0; match < matchesPerRound; match++) {
-                let home = teams[(round + match) % (numTeams - 1)];
-                let away = teams[(numTeams - 1 - match + round) % (numTeams - 1)];
-                if (match === 0) away = teams[numTeams - 1];
+                let homeIdx = (round + match) % (totalTeams - 1);
+                let awayIdx = (totalTeams - 1 - match + round) % (totalTeams - 1);
 
-                if(home !== "BYE" && away !== "BYE") {
-                    scheduledFixtures.push({
-                        id: baseTime + Math.random(), home: home, away: away,
-                        locked: false, settled: false, score: "", outcome: "", matchday: matchdayNumber, comments: []
+                if (match === 0) {
+                    awayIdx = totalTeams - 1;
+                }
+
+                let homeTeam = teams[homeIdx];
+                let awayTeam = teams[awayIdx];
+
+                if (homeTeam !== "BYE ROOM" && awayTeam !== "BYE ROOM") {
+                    generatedFixtures.push({
+                        id: baseId++,
+                        matchday: matchdayNumber,
+                        home: homeTeam,
+                        away: awayTeam,
+                        homeScore: "",
+                        awayScore: "",
+                        settled: false,
+                        locked: false,
+                        isNA: false,
+                        comments: []
                     });
                 }
             }
         }
 
-        for (let round = 0; round < totalRounds; round++) {
-            let matchdayNumber = totalRounds + round + 1;
+        for (let round = 0; round < rounds; round++) {
+            let matchdayNumber = rounds + round + 1;
             for (let match = 0; match < matchesPerRound; match++) {
-                let away = teams[(round + match) % (numTeams - 1)];
-                let home = teams[(numTeams - 1 - match + round) % (numTeams - 1)];
-                if (match === 0) home = teams[numTeams - 1];
+                let homeIdx = (round + match) % (totalTeams - 1);
+                let awayIdx = (totalTeams - 1 - match + round) % (totalTeams - 1);
 
-                if(home !== "BYE" && away !== "BYE") {
-                    scheduledFixtures.push({
-                        id: baseTime + Math.random() + 5000, home: home, away: away,
-                        locked: false, settled: false, score: "", outcome: "", matchday: matchdayNumber, comments: []
+                if (match === 0) {
+                    awayIdx = totalTeams - 1;
+                }
+
+                let homeTeam = teams[homeIdx];
+                let awayTeam = teams[awayIdx];
+
+                if (homeTeam !== "BYE ROOM" && awayTeam !== "BYE ROOM") {
+                    generatedFixtures.push({
+                        id: baseId++,
+                        matchday: matchdayNumber,
+                        home: awayTeam,
+                        away: homeTeam,
+                        homeScore: "",
+                        awayScore: "",
+                        settled: false,
+                        locked: false,
+                        isNA: false,
+                        comments: []
                     });
                 }
             }
         }
 
-        dbState.fixtures = dbState.fixtures.concat(scheduledFixtures);
+        dbState.fixtures = dbState.fixtures.concat(generatedFixtures);
+        selectedAdminMatchdayView = 1;
+        globalUserMatchdayView = 1;
         pushData();
-        alert("League scheduled!");
-    }
-
-    function adminWipeFixtures() {
-        if(confirm("Wipe all matches? This will also completely reset all player prediction scores to 0!")) {
-            dbState.fixtures = [];
-            
-            for(let name in dbState.users) {
-                dbState.users[name].points = 0;
-                dbState.users[name].correct = 0;
-                dbState.users[name].predictions = {};
-                dbState.users[name].predictionTimes = {};
-            }
-            
-            pushData();
-            alert("All fixtures cleared and user predictor scores reset to 0.");
-        }
-    }
-
-    function forceClearSession(username) {
-        if(confirm(`Wipe ${username}?`)) {
-            delete dbState.users[username];
-            pushData();
-        }
-    }
-
-    function renderAdminPanel() {
-        if(!isAdmin) return;
-        
-        if (document.activeElement && (document.activeElement.id.startsWith('score-') || document.activeElement.id === 'admin-matchday-view-select')) {
-            renderAdminUserTable(); 
-            return;
-        }
-        
-        renderAdminFixturesList();
-        renderAdminUserTable();
-    }
-
-    function renderAdminFixturesList() {
-        const container = document.getElementById('admin-fixtures-list');
-        if(!container) return;
-        container.innerHTML = "";
-        
-        const currentActiveDay = getCurrentMatchday();
-        if (selectedAdminMatchdayView === null) selectedAdminMatchdayView = currentActiveDay;
-
-        const maxMatchday = Math.max(...dbState.fixtures.map(f => f.matchday || 0), 1);
-        
-        let selectBlock = document.createElement('div');
-        selectBlock.style.marginBottom = "15px";
-        selectBlock.innerHTML = `<label><b>Filter Admin Settle Grid: </b></label><select id="admin-matchday-view-select" style="padding:6px; font-weight:bold;"></select>`;
-        container.appendChild(selectBlock);
-
-        const innerDropdown = selectBlock.querySelector('select');
-        let dHtml = "";
-        for(let i = 1; i <= maxMatchday; i++) {
-            let tag = (i === currentActiveDay) ? " (Today)" : "";
-            let sl = (i === selectedAdminMatchdayView) ? "selected" : "";
-            dHtml += `<option value="${i}" ${sl}>Matchday ${i}${tag}</option>`;
-        }
-        innerDropdown.innerHTML = dHtml;
-        innerDropdown.onchange = function() {
-            selectedAdminMatchdayView = parseInt(this.value);
-            renderAdminFixturesList();
-        };
-
-        const targetFixtures = dbState.fixtures.filter(f => f.matchday === 0 || f.matchday === selectedAdminMatchdayView);
-
-        if(targetFixtures.length === 0) {
-            let p = document.createElement('p');
-            p.style.color = "var(--text-muted)";
-            p.innerText = "No fixtures found for this loop day.";
-            container.appendChild(p);
-            return;
-        }
-
-        targetFixtures.forEach(fix => {
-            let tag = fix.matchday > 0 ? `[MD ${fix.matchday}] ` : '[Manual] ';
-            let statusTag = fix.settled ? '✅ Settled' : (fix.locked ? '🔒 Locked' : '⏳ Active');
-            
-            let div = document.createElement('div');
-            div.style.padding = "12px 0";
-            div.style.borderBottom = "1px solid #e2e8f0";
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                    <span><b>${tag}${fix.home} vs ${fix.away}</b> <small style="margin-left:8px; color:var(--text-muted)">(${statusTag})</small></span>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="text" id="score-${fix.id}" placeholder="e.g. 2-1 or N/A" style="width:100px; padding:6px; text-transform:uppercase;" value="${fix.score || ''}">
-                        <button class="btn-success" style="padding: 6px 12px; background:var(--accent-blue);" onclick="settleMatch(${fix.id})">Settle</button>
-                        <button style="background:#ff3b3b; color:white; padding: 6px 10px; border-radius:8px; font-size:12px;" onclick="adminDeleteSingleFixture(${fix.id})">❌ Delete</button>
-                    </div>
-                </div>
-            `;
-            container.appendChild(div);
-        });
-    }
-
-    function renderAdminUserTable() {
-        const userTbody = document.querySelector('#admin-user-table tbody');
-        if(!userTbody) return;
-        userTbody.innerHTML = "";
-        
-        let initialKeys = Object.keys(dbState.users || {});
-        if(initialKeys.length === 0) {
-            userTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted)">No profiles found.</td></tr>`;
-        } else {
-            initialKeys.forEach(name => {
-                let uData = dbState.users[name];
-                let typeText = uData.isFan ? "📢 FAN" : `⚽ ${uData.teamName}`;
-                let row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><b>${name}</b></td>
-                    <td>${typeText}</td>
-                    <td><code style="font-size:15px; background:#f1f5f9; padding:4px 8px; border-radius:4px; font-weight:bold; color:var(--accent-orange);">${uData.pin || '----'}</code></td>
-                    <td><button style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); padding:5px 10px; font-size:12px;" onclick="forceClearSession('${name}')">Wipe User</button></td>
-                `;
-                userTbody.appendChild(row);
-            });
-        }
-    }
-
-    function settleMatch(matchId) {
-        const valueBox = document.getElementById(`score-${matchId}`);
-        const inputVal = valueBox.value.trim().toUpperCase();
-        
-        if (!inputVal) return alert("Enter score format (e.g. '2-1') or 'N/A'!");
-
-        let finalScoreString = "";
-        let calculatedOutcome = "";
-        let isNA = false;
-
-        if (inputVal === "N/A" || inputVal === "NA") {
-            isNA = true;
-            finalScoreString = "N/A";
-            calculatedOutcome = "NONE"; 
-        } else {
-            const structuralParts = inputVal.split('-');
-            if (structuralParts.length !== 2 || isNaN(structuralParts[0]) || isNaN(structuralParts[1])) {
-                return alert("Invalid text structure format! Use '2-1' or 'N/A'.");
-            }
-            let hG = parseInt(structuralParts[0]);
-            let aG = parseInt(structuralParts[1]);
-            finalScoreString = `${hG}-${aG}`;
-            calculatedOutcome = hG > aG ? "1" : (aG > hG ? "2" : "X");
-        }
-
-        const fix = dbState.fixtures.find(f => f.id === matchId);
-        if (!fix) return;
-
-        fix.score = finalScoreString;
-        fix.outcome = calculatedOutcome;
-        fix.locked = true;
-        fix.settled = true; 
-
-        if (!isNA) {
-            for(let name in dbState.users) {
-                if(dbState.users[name].predictions && dbState.users[name].predictions[matchId] === calculatedOutcome) {
-                    dbState.users[name].points = (dbState.users[name].points || 0) + 5;
-                    dbState.users[name].correct = (dbState.users[name].correct || 0) + 1;
-                }
-            }
-        }
-
-        pushData();
-        alert("Match successfully settled!");
+        alert(`Successfully auto-generated ${generatedFixtures.length} league fixtures across ${rounds * 2} matchdays!`);
     }
 </script>
+
 </body>
 </html>
