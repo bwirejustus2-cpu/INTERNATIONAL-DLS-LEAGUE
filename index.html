@@ -222,6 +222,37 @@
             margin-bottom: 10px;
         }
 
+        .match-action-row {
+            margin-top: 5px;
+            margin-bottom: 12px;
+            text-align: right;
+        }
+
+        .done-btn {
+            background-color: #cbd5e1;
+            color: var(--text-dark);
+            font-size: 12px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 1px solid #b5bbc5;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .done-btn:hover:not(:disabled) {
+            background-color: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+
+        .done-btn:disabled {
+            background-color: #e2e8f0;
+            color: #94a3b8;
+            border-color: #cbd5e1;
+            cursor: not-allowed;
+        }
+
         .match-comments-section {
             background: #ffffff;
             border-radius: 8px;
@@ -393,7 +424,6 @@
             <div id="fixtures-tab" class="tab-content active card">
                 <h2>1X2 Full Time Predictions & Match Center</h2>
                 
-                <!-- Matchday view controls for public interface -->
                 <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 12px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
                     <label style="font-weight: bold; font-size: 14px;">Select Matchday View:</label>
                     <select id="public-matchday-select" onchange="globalUserMatchdayView = parseInt(this.value); renderFixtures();" style="padding: 6px 12px; font-weight: bold;"></select>
@@ -444,7 +474,6 @@
                         <span id="admin-visits" style="font-weight:bold; font-size:16px;">📊 0 visits</span>
                     </div>
 
-                    <!-- AUTOMATED GENERATOR -->
                     <div style="background: #f8fafc; border: 2px solid var(--accent-purple); padding: 15px; border-radius: 12px; margin-bottom: 25px;">
                         <h3 style="margin-top:0; color:var(--accent-purple);">🤖 Automated League Scheduler</h3>
                         <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Generates a comprehensive Round-Robin schedule (Home & Away) grouped cleanly by Matchdays based entirely on currently registered active participants.</p>
@@ -458,7 +487,6 @@
                         <button class="btn-success" style="background: var(--accent-green);" onclick="adminAddFixture()">Add Single Match</button>
                     </div>
 
-                    <!-- Dynamic Admin Fixtures View Wrapper -->
                     <div id="admin-fixtures-list"></div>
                     
                     <div style="margin: 20px 0; padding: 15px; background: #fff0f0; border-radius: 8px; border: 1px solid #ffcccc;">
@@ -482,7 +510,7 @@
                     <li>Select <b>1</b> for a Home Team win.</li>
                     <li>Select <b>X</b> to predict a Draw game.</li>
                     <li>Select <b>2</b> for an Away Team win.</li>
-                    <li>All choices lock instantly when match score is closed.</li>
+                    <li>Matches lock instantly when marked <b>Done</b> or settled.</li>
                     <li>Earn <b>+5 points</b> for every correct slip.</li>
                     <li>Matches marked <b>N/A</b> give both clubs 0 goals & 0 pts.</li>
                 </ul>
@@ -496,7 +524,6 @@
     const SECRET_KEY = '$2a$10$LnRR7.WaC/FO4X0yPuJ0XedNXXhZ/Y2nb8erhagnR3NQCTjIskqya'; 
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-    // --- CONFIGURATION ---
     const TOURNAMENT_START_DATE = new Date("2026-08-01T00:00:00"); 
 
     let dbState = {
@@ -511,7 +538,6 @@
     let isAdmin = false;
     let editChatId = null;
 
-    // View tracking overrides so refreshes don't hijack drop-down menus
     let globalUserMatchdayView = null;
     let selectedAdminMatchdayView = null;
 
@@ -531,7 +557,6 @@
         }
     });
 
-    // Calculates which matchday corresponds to the current date
     function getCurrentMatchday() {
         const today = new Date();
         const diffTime = today - TOURNAMENT_START_DATE;
@@ -584,6 +609,8 @@
             dbState.fixtures.forEach(f => {
                 if(!f.comments) { f.comments = []; updateNeeded = true; }
                 if(f.matchday === undefined) { f.matchday = 0; updateNeeded = true; }
+                if(f.locked === undefined) { f.locked = false; updateNeeded = true; }
+                if(f.settled === undefined) { f.settled = false; updateNeeded = true; }
             });
 
             if (currentUser && dbState.users[currentUser]) {
@@ -643,7 +670,6 @@
             document.getElementById('user-pin-display').innerHTML = `Your Account Recovery Pin: <b style="color:var(--accent-orange); font-size:16px;">${userObj.pin}</b>`;
         }
 
-        // Setup drop-down select values dynamically based on data limits
         updateSelectorDropdowns();
 
         renderFixtures();
@@ -767,7 +793,6 @@
             return;
         }
 
-        // Display Manual matches alongside the selected calendar day matches
         const activeMatches = dbState.fixtures.filter(f => f.matchday === 0 || f.matchday === globalUserMatchdayView);
 
         if (activeMatches.length === 0) {
@@ -775,7 +800,6 @@
             return;
         }
 
-        // Print header group labels
         let manualGroup = activeMatches.filter(f => f.matchday === 0);
         let scheduledGroup = activeMatches.filter(f => f.matchday === globalUserMatchdayView);
 
@@ -794,15 +818,31 @@
         let userSelection = (currentUser && dbState.users[currentUser]?.predictions) ? dbState.users[currentUser].predictions[fix.id] : null;
         let isLocked = fix.locked;
 
+        // Extract logged-in player's team name
+        let playerTeam = (currentUser && dbState.users[currentUser]) ? dbState.users[currentUser].teamName : "";
+        
+        // Check if current logged-in user belongs to either the Home team or Away team
+        let isMatchPlayer = false;
+        if (playerTeam && !dbState.users[currentUser].isFan) {
+            isMatchPlayer = (playerTeam.toLowerCase() === fix.home.toLowerCase() || playerTeam.toLowerCase() === fix.away.toLowerCase());
+        }
+
         let wrapper = document.createElement('div');
         wrapper.className = "prediction-wrapper";
+
+        let labelText = '⌛ Predictions Awaiting Kick-off';
+        if (fix.settled) {
+            labelText = `Final Score: ${fix.score}`;
+        } else if (fix.locked) {
+            labelText = '🔒 Match in progress / Done (Slips Locked)';
+        }
 
         let row = document.createElement('div');
         row.className = "prediction-row";
         row.innerHTML = `
             <div>
                 <span style="font-size: 16px; font-weight:bold;">${fix.home} vs ${fix.away}</span>
-                <br><span style="font-size:12px; color:var(--text-muted);">${isLocked ? `Final Score: ${fix.score}` : '⌛ Predictions Awaiting Kick-off'}</span>
+                <br><span style="font-size:12px; color:var(--text-muted);">${labelText}</span>
             </div>
             <div class="btn-group">
                 <button class="predict-btn ${userSelection === '1' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '1')">1</button>
@@ -811,6 +851,28 @@
             </div>
         `;
         wrapper.appendChild(row);
+
+        // PLAYER ACTION ROW - Button is disabled unless the user is a match participant
+        let actionRow = document.createElement('div');
+        actionRow.className = "match-action-row";
+        
+        let doneBtnText = '✔️ Mark Match as Done';
+        let doneBtnDisabled = false;
+
+        if (isLocked) {
+            doneBtnText = '🔒 Slip Closed';
+            doneBtnDisabled = true;
+        } else if (!isMatchPlayer) {
+            doneBtnText = '👀 Spectator View';
+            doneBtnDisabled = true;
+        }
+
+        actionRow.innerHTML = `
+            <button class="done-btn" ${doneBtnDisabled ? 'disabled' : ''} onclick="markMatchAsDone(${fix.id})">
+                ${doneBtnText}
+            </button>
+        `;
+        wrapper.appendChild(actionRow);
 
         let commentsBox = document.createElement('div');
         commentsBox.className = "match-comments-section";
@@ -840,6 +902,27 @@
         targetContainer.appendChild(wrapper);
     }
 
+    // Locks the choices securely with team ownership validation
+    function markMatchAsDone(fixtureId) {
+        if(!currentUser) return alert("Log in to verify match completion status!");
+        
+        let fix = dbState.fixtures.find(f => f.id === fixtureId);
+        if(!fix) return;
+
+        let playerTeam = dbState.users[currentUser]?.teamName || "";
+        
+        // Strict verification rule check
+        if (!playerTeam || (playerTeam.toLowerCase() !== fix.home.toLowerCase() && playerTeam.toLowerCase() !== fix.away.toLowerCase())) {
+            return alert("Access Denied: Only the specific teams assigned to this fixture can declare it done!");
+        }
+
+        if(!confirm("Are you sure this match is complete? Clicking OK locks all prediction fields instantly!")) return;
+        
+        fix.locked = true; 
+        pushData();
+        alert("Success! The match has been locked out from predictions.");
+    }
+
     function addMatchComment(fixtureId) {
         if(!currentUser) return alert("Log in to post match comments!");
         let inputEl = document.getElementById(`input-comment-${fixtureId}`);
@@ -865,6 +948,10 @@
 
     function submitPrediction(fixtureId, selection) {
         if(!currentUser) return alert("Register or login to pick slips!");
+        
+        let fix = dbState.fixtures.find(f => f.id === fixtureId);
+        if(fix && fix.locked) return alert("This match is locked. Slips cannot be edited!");
+
         dbState.users[currentUser].predictions[fixtureId] = selection;
         renderFixtures();
         pushData();
@@ -876,7 +963,6 @@
         
         let tableMap = {};
 
-        // Prepare table tracks out of participants
         for (let user in dbState.users) {
             if (dbState.users[user].isFan) continue;
             let tName = dbState.users[user].teamName;
@@ -885,9 +971,8 @@
             }
         }
 
-        // Loop processed closed scores dynamically
         dbState.fixtures.forEach(fix => {
-            if(!fix.locked || !fix.score) return;
+            if(!fix.settled || !fix.score) return;
 
             let hKey = fix.home.toLowerCase();
             let aKey = fix.away.toLowerCase();
@@ -898,10 +983,7 @@
             tableMap[hKey].p += 1;
             tableMap[aKey].p += 1;
 
-            if (fix.score === "N/A") {
-                // Earns 0 goals, 0 points, matches played increments
-                return;
-            }
+            if (fix.score === "N/A") return;
 
             let scores = fix.score.split('-');
             let hG = parseInt(scores[0]);
@@ -942,7 +1024,6 @@
             });
         }
 
-        // Leaderboard rendering logic for users
         const pTbody = document.querySelector('#predictor-table tbody');
         pTbody.innerHTML = "";
 
@@ -1059,7 +1140,7 @@
         if(!home || !away) return alert("Fill fields!");
 
         dbState.fixtures.push({
-            id: Date.now(), home: home, away: away, locked: false,
+            id: Date.now(), home: home, away: away, locked: false, settled: false,
             score: "", outcome: "", matchday: 0, comments: []
         });
         document.getElementById('new-home').value = "";
@@ -1101,7 +1182,7 @@
                 if(home !== "BYE" && away !== "BYE") {
                     scheduledFixtures.push({
                         id: baseTime + Math.random(), home: home, away: away,
-                        locked: false, score: "", outcome: "", matchday: matchdayNumber, comments: []
+                        locked: false, settled: false, score: "", outcome: "", matchday: matchdayNumber, comments: []
                     });
                 }
             }
@@ -1117,7 +1198,7 @@
                 if(home !== "BYE" && away !== "BYE") {
                     scheduledFixtures.push({
                         id: baseTime + Math.random() + 5000, home: home, away: away,
-                        locked: false, score: "", outcome: "", matchday: matchdayNumber, comments: []
+                        locked: false, settled: false, score: "", outcome: "", matchday: matchdayNumber, comments: []
                     });
                 }
             }
@@ -1142,11 +1223,9 @@
         }
     }
 
-    // --- RENDER ADMIN INTERFACE safely ---
     function renderAdminPanel() {
         if(!isAdmin) return;
         
-        // Fix: Don't reconstruct panel while typing
         if (document.activeElement && document.activeElement.id.startsWith('score-')) {
             renderAdminUserTable(); 
             return;
@@ -1196,12 +1275,14 @@
 
         targetFixtures.forEach(fix => {
             let tag = fix.matchday > 0 ? `[MD ${fix.matchday}] ` : '[Manual] ';
+            let statusTag = fix.settled ? '✅ Settled' : (fix.locked ? '🔒 Locked' : '⏳ Active');
+            
             let div = document.createElement('div');
             div.style.padding = "12px 0";
             div.style.borderBottom = "1px solid #e2e8f0";
             div.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span><b>${tag}${fix.home} vs ${fix.away}</b></span>
+                    <span><b>${tag}${fix.home} vs ${fix.away}</b> <small style="margin-left:8px; color:var(--text-muted)">(${statusTag})</small></span>
                     <div>
                         <input type="text" id="score-${fix.id}" placeholder="e.g. 2-1 or N/A" style="width:100px; padding:6px; text-transform:uppercase;" value="${fix.score || ''}">
                         <button class="btn-success" style="padding: 6px 12px; background:var(--accent-blue);" onclick="settleMatch(${fix.id})">Settle</button>
@@ -1236,7 +1317,6 @@
         }
     }
 
-    // --- SETTLE LOGIC WITH DYNAMIC EXCEPTION STRINGS FOR N/A ---
     function settleMatch(matchId) {
         const valueBox = document.getElementById(`score-${matchId}`);
         const inputVal = valueBox.value.trim().toUpperCase();
@@ -1268,8 +1348,8 @@
         fix.score = finalScoreString;
         fix.outcome = calculatedOutcome;
         fix.locked = true;
+        fix.settled = true; 
 
-        // Distribute system prediction tokens to fans and participants (+5 pts)
         if (!isNA) {
             for(let name in dbState.users) {
                 if(dbState.users[name].predictions && dbState.users[name].predictions[matchId] === calculatedOutcome) {
