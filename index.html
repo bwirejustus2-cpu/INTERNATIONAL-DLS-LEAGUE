@@ -107,7 +107,6 @@
             border-radius: 8px 8px 0 0;
             transition: all 0.3s ease;
             white-space: nowrap;
-            position: relative;
         }
 
         .tab-btn:hover {
@@ -119,22 +118,6 @@
             color: var(--accent-purple);
             background: rgba(136, 0, 255, 0.08);
             border-bottom: 4px solid var(--accent-purple);
-        }
-
-        .chat-badge {
-            background-color: #ff3b3b;
-            color: white;
-            font-size: 11px;
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin-left: 5px;
-            display: inline-block;
-            vertical-align: middle;
-            font-weight: bold;
-        }
-
-        .chat-badge.hidden {
-            display: none !important;
         }
 
         .tab-content { display: none; }
@@ -383,6 +366,7 @@
             color: var(--accent-purple);
         }
 
+        /* Modal styling for online list */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -415,25 +399,9 @@
             padding: 8px 0;
             border-bottom: 1px solid #f1f5f9;
         }
-        
-        #loading-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(240, 244, 248, 0.85);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            font-weight: bold;
-            color: var(--accent-purple);
-            font-size: 18px;
-        }
     </style>
 </head>
 <body>
-
-<div id="loading-overlay">🔄 Connecting to Cloud Database...</div>
 
 <div class="container">
     <header>
@@ -443,6 +411,7 @@
         </div>
     </header>
 
+    <!-- Modal element for showing who is online -->
     <div id="online-modal" class="modal-overlay hidden" onclick="closeOnlineModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
             <h3 style="margin-top:0; border-bottom: 2px solid var(--accent-blue); padding-bottom: 8px;">Active Participants</h3>
@@ -493,10 +462,10 @@
     </div>
 
     <div class="tabs">
-        <button class="tab-btn active" id="btn-fixtures-tab" onclick="switchTab('fixtures-tab')">📅 FIXTURES AND PREDICTIONS</button>
-        <button class="tab-btn" id="btn-standings-tab" onclick="switchTab('standings-tab')">📊 Leaderboards</button>
-        <button class="tab-btn" id="btn-chat-tab" onclick="switchTab('chat-tab')">💬 Fan Zone Chat <span id="chat-unread-badge" class="chat-badge hidden">0</span></button>
-        <button class="tab-btn" id="btn-admin-tab" onclick="switchTab('admin-tab')">⚙️ Admin Control</button>
+        <button class="tab-btn active" onclick="switchTab('fixtures-tab')">📅 FIXTURES AND PREDICTIONS</button>
+        <button class="tab-btn" onclick="switchTab('standings-tab')">📊 Leaderboards</button>
+        <button class="tab-btn" onclick="switchTab('chat-tab')">💬 Fan Zone Chat</button>
+        <button class="tab-btn" onclick="switchTab('admin-tab')">⚙️ Admin Control</button>
     </div>
 
     <div class="grid">
@@ -601,12 +570,10 @@
 </div>
 
 <script>
-    // ==========================================
-    // 🔗 JSONBIN CONFIGURATION
-    // ==========================================
-    const BIN_ID = '6a632995da38895dfe88fbfc'; // Your active cloud Bin ID
-    const SECRET_KEY = '$2a$10$YOUR_SECRET_KEY_HERE'; // Replace with your actual JSONBin X-Master-Key/Secret Key
+    const BIN_ID = '6a632995da38895dfe88fbfc'; 
+    const SECRET_KEY = '$2a$10$LnRR7.WaC/FO4X0yPuJ0XedNXXhZ/Y2nb8erhagnR3NQCTjIskqya'; 
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
     const TOURNAMENT_START_DATE = new Date("2026-08-01T00:00:00"); 
 
     let dbState = {
@@ -623,91 +590,22 @@
 
     let globalUserMatchdayView = null;
     let selectedAdminMatchdayView = null;
-    
-    let activeTabId = 'fixtures-tab';
-    let localChatCount = 0; 
-    let unreadChatCount = 0;
-    let isSaving = false;
 
     window.onload = function() {
         checkLocalSession();
-        fetchCloudData(true); // First load triggers loader removal
+        fetchData(true); 
         
-        // Sync database state from cloud every 6 seconds
         setInterval(() => {
-            if (!isSaving) fetchCloudData(false);
-        }, 6000);
+            fetchData(false);
+        }, 5000);
     };
 
-    // ==========================================
-    // 📡 CLOUD DATABASE SYNC ENGINE (FETCH / PUSH)
-    // ==========================================
-    async function fetchCloudData(isInitialLoad = false) {
-        try {
-            const res = await fetch(API_URL, {
-                method: 'GET',
-                headers: { 'X-Master-Key': SECRET_KEY }
-            });
-            
-            if (!res.ok) throw new Error("Database fetch request failed");
-            
-            const data = await res.json();
-            dbState = data.record;
-
-            // Automatic cloud bootstrapper if bin contents are empty structures
-            if (!dbState.users || !dbState.fixtures || !dbState.chat) {
-                dbState = { users: {}, fixtures: [], chat: [], visits: 1 };
-                await pushCloudData();
-            }
-
-            if (dbState.chat.length > localChatCount) {
-                let incomingMessages = dbState.chat.length - localChatCount;
-                if (activeTabId !== 'chat-tab' && !isInitialLoad) {
-                    unreadChatCount += incomingMessages;
-                }
-                localChatCount = dbState.chat.length;
-            }
-
-            // Session visitor counter incremental check
-            if (isInitialLoad && !localStorage.getItem('dls_visited_session')) {
-                dbState.visits = (dbState.visits || 0) + 1;
-                localStorage.setItem('dls_visited_session', 'true');
-                localChatCount = dbState.chat.length;
-                await pushCloudData();
-            } else {
-                renderUI();
-            }
-
-            if (isInitialLoad) {
-                document.getElementById('loading-overlay').classList.add('hidden');
-            }
-        } catch (e) {
-            console.error("Cloud Syncer Error:", e);
-            if (isInitialLoad) {
-                document.getElementById('loading-overlay').innerText = "⚠️ Connection Refused. Verify your JSONBin Secret Key configuration.";
-            }
+    window.addEventListener('beforeunload', function() {
+        if (currentUser && dbState.users && dbState.users[currentUser]) {
+            dbState.users[currentUser].lastSeen = 0;
+            navigator.sendBeacon(API_URL, JSON.stringify(dbState));
         }
-    }
-
-    async function pushCloudData() {
-        isSaving = true;
-        try {
-            const res = await fetch(API_URL, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Master-Key': SECRET_KEY
-                },
-                body: JSON.stringify(dbState)
-            });
-            if (!res.ok) throw new Error("Cloud update push failed.");
-            renderUI();
-        } catch (e) {
-            console.error("Cloud Save Error:", e);
-        } finally {
-            isSaving = false;
-        }
-    }
+    });
 
     function getCurrentMatchday() {
         const today = new Date();
@@ -717,13 +615,92 @@
         return diffDays + 1; 
     }
 
+    async function fetchData(isInitial) {
+        try {
+            let headers = { "X-Master-Key": SECRET_KEY };
+            if (isInitial) headers["X-Bin-Meta"] = "false"; 
+            
+            const response = await fetch(API_URL + (isInitial ? "" : "/latest"), { headers: headers });
+            const data = await response.json();
+            
+            dbState = data.record ? data.record : data;
+
+            if(!dbState.users) dbState.users = {};
+            if(!dbState.fixtures) dbState.fixtures = [];
+            if(!dbState.chat) dbState.chat = [];
+            
+            let updateNeeded = false;
+
+            for (let name in dbState.users) {
+                if (!dbState.users[name].pin) {
+                    dbState.users[name].pin = Math.floor(1000 + Math.random() * 9000).toString();
+                    updateNeeded = true;
+                }
+                if (!dbState.users[name].predictions) {
+                    dbState.users[name].predictions = {};
+                    updateNeeded = true;
+                }
+                // Initialize timestamps object if missing
+                if (!dbState.users[name].predictionTimes) {
+                    dbState.users[name].predictionTimes = {};
+                    updateNeeded = true;
+                }
+                if (dbState.users[name].isFan === undefined) {
+                    dbState.users[name].isFan = false;
+                    updateNeeded = true;
+                }
+            }
+
+            dbState.fixtures.forEach(f => {
+                if(!f.comments) { f.comments = []; updateNeeded = true; }
+                if(f.matchday === undefined) { f.matchday = 0; updateNeeded = true; }
+                if(f.locked === undefined) { f.locked = false; updateNeeded = true; }
+                if(f.settled === undefined) { f.settled = false; updateNeeded = true; }
+            });
+
+            if (currentUser && dbState.users[currentUser]) {
+                dbState.users[currentUser].lastSeen = Date.now();
+                updateNeeded = true;
+            }
+
+            if (isInitial) {
+                dbState.visits = (dbState.visits || 0) + 1;
+                updateNeeded = true;
+            }
+
+            if (updateNeeded) {
+                pushData();
+            } else {
+                renderUI();
+            }
+        } catch (error) {
+            console.error("Live loop active...");
+        }
+    }
+
+    async function pushData() {
+        try {
+            await fetch(API_URL, {
+                method: 'PUT',
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Master-Key": SECRET_KEY
+                },
+                body: JSON.stringify(dbState)
+            });
+            renderUI();
+        } catch (error) {
+            console.error("Sync error:", error);
+        }
+    }
+
     function renderUI() {
         let now = Date.now();
         let dynamicOnlineCount = 0;
         
         for (let name in dbState.users) {
             let lastSeen = dbState.users[name].lastSeen || 0;
-            if (now - lastSeen < 40000) dynamicOnlineCount++;
+            if (now - lastSeen < 15000) dynamicOnlineCount++;
         }
 
         document.getElementById('online-counter').innerText = `🟢 ${dynamicOnlineCount} participant${dynamicOnlineCount !== 1 ? 's' : ''} online (Click to view)`;
@@ -731,24 +708,11 @@
 
         if(currentUser && dbState.users[currentUser]) {
             const userObj = dbState.users[currentUser];
-            if (dbState.users[currentUser].lastSeen < now - 20000) {
-                dbState.users[currentUser].lastSeen = Date.now();
-                pushCloudData();
-            }
-
             document.getElementById('active-team').innerText = userObj.isFan ? "Fan Room Mode" : (userObj.teamName || 'N/A');
             document.getElementById('active-role').innerText = userObj.isFan ? "📢 FAN" : "⚽ PARTICIPANT";
             document.getElementById('active-role').style.background = userObj.isFan ? "rgba(136, 0, 255, 0.1)" : "rgba(0, 119, 255, 0.1)";
             document.getElementById('active-role').style.color = userObj.isFan ? "var(--accent-purple)" : "var(--accent-blue)";
             document.getElementById('user-pin-display').innerHTML = `Your Account Recovery Pin: <b style="color:var(--accent-orange); font-size:16px;">${userObj.pin}</b>`;
-        }
-
-        const badgeEl = document.getElementById('chat-unread-badge');
-        if (unreadChatCount > 0) {
-            badgeEl.innerText = unreadChatCount;
-            badgeEl.classList.remove('hidden');
-        } else {
-            badgeEl.classList.add('hidden');
         }
 
         updateSelectorDropdowns();
@@ -758,6 +722,7 @@
         renderAdminPanel();
     }
 
+    /* Modal controls for seeing who is currently online */
     function openOnlineModal() {
         const modal = document.getElementById('online-modal');
         const listContainer = document.getElementById('online-users-list');
@@ -769,7 +734,7 @@
         for (let name in dbState.users) {
             let userObj = dbState.users[name];
             let lastSeen = userObj.lastSeen || 0;
-            let isOnline = (now - lastSeen < 40000);
+            let isOnline = (now - lastSeen < 15000);
             
             let row = document.createElement('div');
             row.className = "online-user-row";
@@ -813,27 +778,10 @@
     }
 
     function switchTab(tabId) {
-        activeTabId = tabId;
-        
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        
         document.getElementById(tabId).classList.add('active');
-        
-        const currentBtn = document.getElementById(`btn-${tabId}`);
-        if(currentBtn) currentBtn.classList.add('active');
-        
-        if (tabId === 'chat-tab') {
-            unreadChatCount = 0;
-            localChatCount = dbState.chat.length;
-            const badgeEl = document.getElementById('chat-unread-badge');
-            if(badgeEl) badgeEl.classList.add('hidden');
-            
-            setTimeout(() => {
-                const chatBox = document.getElementById('chat-box');
-                if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
-            }, 50);
-        }
+        if(window.event) window.event.currentTarget.classList.add('active');
     }
 
     function toggleAuthViews(mode) {
@@ -854,7 +802,7 @@
         document.getElementById('register-team-view').classList.remove('hidden');
     }
 
-    async function registerAsFan() {
+    function registerAsFan() {
         let username = document.getElementById('reg-username').value.trim();
         if(!username) return alert("Enter a valid username!");
         if(dbState.users[username]) return alert("Username already taken!");
@@ -873,10 +821,10 @@
         localStorage.setItem('dls_user', username);
         document.getElementById('reg-username').value = "";
         checkLocalSession();
-        await pushCloudData();
+        pushData();
     }
 
-    async function completeRegistration() {
+    function completeRegistration() {
         let teamName = document.getElementById('reg-teamname').value.trim();
         if(!teamName) return alert("Please enter your team name!");
 
@@ -895,10 +843,10 @@
         document.getElementById('reg-username').value = "";
         document.getElementById('reg-teamname').value = "";
         checkLocalSession();
-        await pushCloudData();
+        pushData();
     }
 
-    async function recoverAccount() {
+    function recoverAccount() {
         let username = document.getElementById('rec-username').value.trim();
         let pin = document.getElementById('rec-pin').value.trim();
         if(!dbState.users[username] || dbState.users[username].pin !== pin) return alert("Invalid credentials!");
@@ -906,16 +854,16 @@
         localStorage.setItem('dls_user', username);
         dbState.users[currentUser].lastSeen = Date.now();
         checkLocalSession();
-        await pushCloudData();
+        pushData();
     }
 
-    async function logout() {
+    function logout() {
         if (currentUser && dbState.users[currentUser]) dbState.users[currentUser].lastSeen = 0;
         localStorage.removeItem('dls_user');
         currentUser = null;
         document.getElementById('welcome-view').classList.add('hidden');
         document.getElementById('register-username-view').classList.remove('hidden');
-        await pushCloudData();
+        pushData();
     }
 
     function checkLocalSession() {
@@ -933,7 +881,7 @@
         container.innerHTML = "";
 
         if(dbState.fixtures.length === 0) {
-            container.innerHTML = "<p style='color:var(--text-muted); font-style:italic;'>No match fixtures listed yet. Go to Admin Control to generate matchups!</p>";
+            container.innerHTML = "<p style='color:var(--text-muted); font-style:italic;'>No match fixtures listed yet.</p>";
             return;
         }
 
@@ -961,6 +909,7 @@
     function buildFixtureNode(fix, targetContainer) {
         let userSelection = (currentUser && dbState.users[currentUser]?.predictions) ? dbState.users[currentUser].predictions[fix.id] : null;
         let isLocked = fix.locked;
+
         let playerTeam = (currentUser && dbState.users[currentUser]) ? dbState.users[currentUser].teamName : "";
         
         let isMatchPlayer = false;
@@ -978,6 +927,7 @@
             labelText = '🔒 Match in progress / Done (Slips Locked)';
         }
 
+        // Show remaining modification time to users if a prediction exists
         if (currentUser && dbState.users[currentUser].predictionTimes && dbState.users[currentUser].predictionTimes[fix.id] && !fix.locked && !fix.settled) {
             let initialPredictionTime = dbState.users[currentUser].predictionTimes[fix.id];
             let minutesPassed = Math.floor((Date.now() - initialPredictionTime) / 60000);
@@ -1053,7 +1003,7 @@
         targetContainer.appendChild(wrapper);
     }
 
-    async function submitPrediction(fixtureId, selection) {
+    function submitPrediction(fixtureId, selection) {
         if(!currentUser) return alert("Register or login to pick slips!");
         
         let fix = dbState.fixtures.find(f => f.id === fixtureId);
@@ -1061,23 +1011,26 @@
 
         let userObj = dbState.users[currentUser];
         
+        // 10-Minute Lock Check
         if(userObj.predictions && userObj.predictions[fixtureId]) {
             let initialTime = userObj.predictionTimes[fixtureId] || 0;
             let timeElapsed = Date.now() - initialTime;
             
-            if(timeElapsed > 600000) { 
+            if(timeElapsed > 600000) { // 600,000 ms = 10 minutes
                 return alert("Access Denied: 10 minutes have passed since your initial pick. This selection is permanently locked!");
             }
         } else {
+            // First time predicting this match, log the initial timestamp
             if(!userObj.predictionTimes) userObj.predictionTimes = {};
             userObj.predictionTimes[fixtureId] = Date.now();
         }
 
         userObj.predictions[fixtureId] = selection;
-        await pushCloudData();
+        renderFixtures();
+        pushData();
     }
 
-    async function markMatchAsDone(fixtureId) {
+    function markMatchAsDone(fixtureId) {
         if(!currentUser) return alert("Log in to verify match completion status!");
         
         let fix = dbState.fixtures.find(f => f.id === fixtureId);
@@ -1092,11 +1045,11 @@
         if(!confirm("Are you sure this match is complete? Clicking OK locks all prediction fields instantly!")) return;
         
         fix.locked = true; 
-        await pushCloudData();
+        pushData();
         alert("Success! The match has been locked out from predictions.");
     }
 
-    async function addMatchComment(fixtureId) {
+    function addMatchComment(fixtureId) {
         if(!currentUser) return alert("Log in to post match comments!");
         let inputEl = document.getElementById(`input-comment-${fixtureId}`);
         let txt = inputEl.value.trim();
@@ -1108,14 +1061,14 @@
         let timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         fix.comments.push({ id: Date.now(), user: currentUser, text: txt, time: timeStr });
         inputEl.value = "";
-        await pushCloudData();
+        pushData();
     }
 
-    async function deleteMatchComment(fixtureId, commentId) {
+    function deleteMatchComment(fixtureId, commentId) {
         let fix = dbState.fixtures.find(f => f.id === fixtureId);
         if(fix && fix.comments) {
             fix.comments = fix.comments.filter(c => c.id !== commentId);
-            await pushCloudData();
+            pushData();
         }
     }
 
@@ -1214,10 +1167,6 @@
 
     function renderChat() {
         const box = document.getElementById('chat-box');
-        if(!box) return;
-
-        let shouldScroll = (box.scrollTop + box.clientHeight >= box.scrollHeight - 50);
-
         box.innerHTML = "";
         dbState.chat.forEach(msg => {
             let div = document.createElement('div');
@@ -1243,17 +1192,13 @@
             `;
             box.appendChild(div);
         });
-
-        if (shouldScroll && activeTabId === 'chat-tab') {
-            box.scrollTop = box.scrollHeight;
-        }
     }
 
     function escapeHtml(text) {
         return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     }
 
-    async function sendChat() {
+    function sendChat() {
         if(!currentUser) return alert("Log in to join chat rooms!");
         let text = document.getElementById('chat-input').value.trim();
         if(!text) return;
@@ -1266,11 +1211,9 @@
             let dateStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             let monthDay = new Date().toLocaleDateString([], {month: 'short', day: 'numeric'});
             dbState.chat.push({ id: Date.now(), user: currentUser, msg: text, time: `${dateStr} ${monthDay}` });
-            
-            localChatCount++;
         }
         document.getElementById('chat-input').value = "";
-        await pushCloudData();
+        pushData();
     }
 
     function initiateEditChat(id, currentText) {
@@ -1288,11 +1231,10 @@
         document.getElementById('chat-submit-btn').innerText = "Post";
     }
 
-    async function deleteChatMessage(id) {
+    function deleteChatMessage(id) {
         if(confirm("Permanently delete message?")) {
             dbState.chat = dbState.chat.filter(m => m.id !== id);
-            localChatCount = Math.max(0, localChatCount - 1);
-            await pushCloudData();
+            pushData();
         }
     }
 
@@ -1307,7 +1249,7 @@
         }
     }
 
-    async function adminAddFixture() {
+    function adminAddFixture() {
         let home = document.getElementById('new-home').value.trim();
         let away = document.getElementById('new-away').value.trim();
         if(!home || !away) return alert("Fill fields!");
@@ -1318,28 +1260,18 @@
         });
         document.getElementById('new-home').value = "";
         document.getElementById('new-away').value = "";
-        await pushCloudData();
+        pushData();
     }
 
-    async function adminDeleteSingleFixture(matchId) {
+    /* FEATURE: Delete a single selected match entirely from DB */
+    function adminDeleteSingleFixture(matchId) {
         if(!confirm("Are you sure you want to permanently delete this single match fixture?")) return;
-        
-        let fix = dbState.fixtures.find(f => f.id === matchId);
-        if (fix && fix.settled && fix.outcome !== "NONE") {
-            for(let name in dbState.users) {
-                if(dbState.users[name].predictions && dbState.users[name].predictions[matchId] === fix.outcome) {
-                    dbState.users[name].points = Math.max(0, (dbState.users[name].points || 0) - 5);
-                    dbState.users[name].correct = Math.max(0, (dbState.users[name].correct || 0) - 1);
-                }
-            }
-        }
-        
         dbState.fixtures = dbState.fixtures.filter(f => f.id !== matchId);
-        await pushCloudData();
-        alert("Match fixture successfully deleted and affected points rolled back.");
+        pushData();
+        alert("Match fixture successfully deleted.");
     }
 
-    async function adminGenerateRoundRobin() {
+    function adminGenerateRoundRobin() {
         let teams = [];
         let observed = new Set();
 
@@ -1396,30 +1328,21 @@
         }
 
         dbState.fixtures = dbState.fixtures.concat(scheduledFixtures);
-        await pushCloudData();
+        pushData();
         alert("League scheduled!");
     }
 
-    async function adminWipeFixtures() {
-        if(confirm("Wipe all matches? This will also completely reset all player prediction scores to 0!")) {
+    function adminWipeFixtures() {
+        if(confirm("Wipe all matches?")) {
             dbState.fixtures = [];
-            
-            for(let name in dbState.users) {
-                dbState.users[name].points = 0;
-                dbState.users[name].correct = 0;
-                dbState.users[name].predictions = {};
-                dbState.users[name].predictionTimes = {};
-            }
-            
-            await pushCloudData();
-            alert("All fixtures cleared and user predictor scores reset to 0.");
+            pushData();
         }
     }
 
-    async function forceClearSession(username) {
+    function forceClearSession(username) {
         if(confirm(`Wipe ${username}?`)) {
             delete dbState.users[username];
-            await pushCloudData();
+            pushData();
         }
     }
 
@@ -1518,7 +1441,7 @@
         }
     }
 
-    async function settleMatch(matchId) {
+    function settleMatch(matchId) {
         const valueBox = document.getElementById(`score-${matchId}`);
         const inputVal = valueBox.value.trim().toUpperCase();
         
@@ -1546,11 +1469,6 @@
         const fix = dbState.fixtures.find(f => f.id === matchId);
         if (!fix) return;
 
-        if (fix.settled) {
-            alert("This match has already been settled previously!");
-            return;
-        }
-
         fix.score = finalScoreString;
         fix.outcome = calculatedOutcome;
         fix.locked = true;
@@ -1565,7 +1483,7 @@
             }
         }
 
-        await pushCloudData();
+        pushData();
         alert("Match successfully settled!");
     }
 </script>
