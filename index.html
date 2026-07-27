@@ -205,15 +205,52 @@
             color: #ff3b3b;
         }
 
+        .prediction-wrapper {
+            background: var(--panel-sub);
+            border: 2px solid #d0e1fd;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            padding: 15px;
+        }
+
         .prediction-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 18px;
-            background: var(--panel-sub);
-            border: 2px solid #d0e1fd;
-            border-radius: 12px;
-            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #cbd5e1;
+            margin-bottom: 10px;
+        }
+
+        .match-comments-section {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+        }
+
+        .match-comments-list {
+            max-height: 120px;
+            overflow-y: auto;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .match-comment-item {
+            padding: 4px 6px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .matchday-header {
+            background: var(--accent-purple);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-weight: bold;
         }
 
         .btn-group {
@@ -354,8 +391,8 @@
     <div class="grid">
         <div class="main-content">
             <div id="fixtures-tab" class="tab-content active card">
-                <h2>1X2 Full Time Predictions</h2>
-                <p style="font-size:13px; color: var(--text-muted); margin-bottom: 20px;">Predict Home Win (1), Draw (X), or Away Win (2). Correct choices award 5 points automatically.</p>
+                <h2>1X2 Full Time Predictions & Match Center</h2>
+                <p style="font-size:13px; color: var(--text-muted); margin-bottom: 20px;">Predict Home Win (1), Draw (X), or Away Win (2). Talk tactics inside each match comments panel below!</p>
                 <div id="fixtures-list"></div>
             </div>
 
@@ -401,11 +438,18 @@
                         <span id="admin-visits" style="font-weight:bold; font-size:16px;">📊 0 visits</span>
                     </div>
 
-                    <h3>Score Settlement Center / Create Matches</h3>
+                    <!-- AUTOMATED GENERATOR -->
+                    <div style="background: #f8fafc; border: 2px solid var(--accent-purple); padding: 15px; border-radius: 12px; margin-bottom: 25px;">
+                        <h3 style="margin-top:0; color:var(--accent-purple);">🤖 Automated League Scheduler</h3>
+                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Generates a comprehensive Round-Robin schedule (Home & Away) grouped cleanly by Matchdays based entirely on currently registered active participants.</p>
+                        <button class="btn-success" style="background: var(--accent-purple);" onclick="adminGenerateRoundRobin()">Generate Matchday Fixtures</button>
+                    </div>
+
+                    <h3>Manual Add / Score Settlement Center</h3>
                     <div style="display: flex; gap: 8px; margin-bottom: 20px;">
                         <input type="text" id="new-home" placeholder="Home Team Name" style="flex-grow: 1;">
                         <input type="text" id="new-away" placeholder="Away Team Name" style="flex-grow: 1;">
-                        <button class="btn-success" style="background: var(--accent-green);" onclick="adminAddFixture()">Add Match</button>
+                        <button class="btn-success" style="background: var(--accent-green);" onclick="adminAddFixture()">Add Single Match</button>
                     </div>
 
                     <div id="admin-fixtures-list"></div>
@@ -499,12 +543,6 @@
             
             let updateNeeded = false;
 
-            if (isInitial && dbState.fixtures.length > 0 && dbState.fixtures.some(f => f.home.includes("YANITED") || f.home.includes("Savage") || f.home.includes("TITUS"))) {
-                dbState.fixtures = [];
-                dbState.standings = [];
-                updateNeeded = true;
-            }
-
             for (let name in dbState.users) {
                 if (!dbState.users[name].pin) {
                     dbState.users[name].pin = Math.floor(1000 + Math.random() * 9000).toString();
@@ -519,6 +557,18 @@
                     updateNeeded = true;
                 }
             }
+
+            // Verify comments structures on existing fixtures
+            dbState.fixtures.forEach(f => {
+                if(!f.comments) {
+                    f.comments = [];
+                    updateNeeded = true;
+                }
+                if(!f.matchday) {
+                    f.matchday = 0; // 0 means unsorted/manual
+                    updateNeeded = true;
+                }
+            });
 
             if (currentUser && dbState.users[currentUser]) {
                 dbState.users[currentUser].lastSeen = Date.now();
@@ -589,7 +639,7 @@
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
-        if(event) event.currentTarget.classList.add('active');
+        if(window.event) window.event.currentTarget.classList.add('active');
     }
 
     function toggleAuthViews(mode) {
@@ -692,29 +742,116 @@
         container.innerHTML = "";
 
         if(dbState.fixtures.length === 0) {
-            container.innerHTML = "<p style='color:var(--text-muted); font-style:italic;'>No custom matches listed yet. Open the Admin Control panel to configure fresh matches for your active teams!</p>";
+            container.innerHTML = "<p style='color:var(--text-muted); font-style:italic;'>No match fixtures listed yet.</p>";
             return;
         }
 
-        dbState.fixtures.forEach(fix => {
-            let userSelection = (currentUser && dbState.users[currentUser]?.predictions) ? dbState.users[currentUser].predictions[fix.id] : null;
-            let isLocked = fix.locked;
-
-            let row = document.createElement('div');
-            row.className = "prediction-row";
-            row.innerHTML = `
-                <div>
-                    <span style="font-size: 16px; font-weight:bold;">${fix.home} vs ${fix.away}</span>
-                    <br><span style="font-size:12px; color:var(--text-muted);">${isLocked ? `Result: ${fix.score}` : '⌛ Awaiting Kick-off'}</span>
-                </div>
-                <div class="btn-group">
-                    <button class="predict-btn ${userSelection === '1' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '1')">1</button>
-                    <button class="predict-btn ${userSelection === 'X' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, 'X')">X</button>
-                    <button class="predict-btn ${userSelection === '2' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '2')">2</button>
-                </div>
-            `;
-            container.appendChild(row);
+        // Group fixtures by matchday
+        let matchdays = {};
+        dbState.fixtures.forEach(f => {
+            let md = f.matchday || 0;
+            if(!matchdays[md]) matchdays[md] = [];
+            matchdays[md].push(f);
         });
+
+        // Render sorted matchdays
+        let sortedKeys = Object.keys(matchdays).sort((a, b) => a - b);
+        sortedKeys.forEach(key => {
+            if(key == 0) {
+                let header = document.createElement('div');
+                header.className = "matchday-header";
+                header.style.background = "var(--accent-blue)";
+                header.innerText = "⚡ MANUAL / SINGLE MATCHES";
+                container.appendChild(header);
+            } else {
+                let header = document.createElement('div');
+                header.className = "matchday-header";
+                header.innerText = `📅 MATCHDAY ${key}`;
+                container.appendChild(header);
+            }
+
+            matchdays[key].forEach(fix => {
+                let userSelection = (currentUser && dbState.users[currentUser]?.predictions) ? dbState.users[currentUser].predictions[fix.id] : null;
+                let isLocked = fix.locked;
+
+                let wrapper = document.createElement('div');
+                wrapper.className = "prediction-wrapper";
+
+                // Prediction Main Block
+                let row = document.createElement('div');
+                row.className = "prediction-row";
+                row.innerHTML = `
+                    <div>
+                        <span style="font-size: 16px; font-weight:bold;">${fix.home} vs ${fix.away}</span>
+                        <br><span style="font-size:12px; color:var(--text-muted);">${isLocked ? `Result: ${fix.score}` : '⌛ Awaiting Kick-off'}</span>
+                    </div>
+                    <div class="btn-group">
+                        <button class="predict-btn ${userSelection === '1' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '1')">1</button>
+                        <button class="predict-btn ${userSelection === 'X' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, 'X')">X</button>
+                        <button class="predict-btn ${userSelection === '2' ? 'selected' : ''}" ${isLocked ? 'disabled' : ''} onclick="submitPrediction(${fix.id}, '2')">2</button>
+                    </div>
+                `;
+                wrapper.appendChild(row);
+
+                // Embedded Comments Section Below Matches
+                let commentsBox = document.createElement('div');
+                commentsBox.className = "match-comments-section";
+                
+                let commentsListHtml = "";
+                if(fix.comments && fix.comments.length > 0) {
+                    fix.comments.forEach(c => {
+                        let deleteBtn = isAdmin ? `<span style="color:#ff3b3b; cursor:pointer; font-weight:bold; margin-left:8px;" onclick="deleteMatchComment(${fix.id}, ${c.id})">❌</span>` : '';
+                        commentsListHtml += `
+                            <div class="match-comment-item">
+                                <span><b>${c.user}:</b> ${c.text}</span>
+                                <span style="font-size:10px; color:var(--text-muted);">${c.time} ${deleteBtn}</span>
+                            </div>`;
+                    });
+                } else {
+                    commentsListHtml = `<p style="font-size:11px; color:var(--text-muted); margin:4px; font-style:italic;">No comments yet. Be the first to analyze!</p>`;
+                }
+
+                commentsBox.innerHTML = `
+                    <div class="match-comments-list">${commentsListHtml}</div>
+                    <div style="display:flex; gap:6px;">
+                        <input type="text" id="input-comment-${fix.id}" placeholder="Write match comment..." style="flex-grow:1; padding:6px; font-size:12px;">
+                        <button class="btn-success" style="padding:6px 12px; font-size:12px; background:var(--accent-blue);" onclick="addMatchComment(${fix.id})">Comment</button>
+                    </div>
+                `;
+                wrapper.appendChild(commentsBox);
+                container.appendChild(wrapper);
+            });
+        });
+    }
+
+    function addMatchComment(fixtureId) {
+        if(!currentUser) return alert("Log in to post match comments!");
+        let inputEl = document.getElementById(`input-comment-${fixtureId}`);
+        let txt = inputEl.value.trim();
+        if(!txt) return;
+
+        let fix = dbState.fixtures.find(f => f.id === fixtureId);
+        if(!fix.comments) fix.comments = [];
+        
+        let timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        fix.comments.push({
+            id: Date.now(),
+            user: currentUser,
+            text: txt,
+            time: timeStr
+        });
+
+        inputEl.value = "";
+        pushData();
+    }
+
+    function deleteMatchComment(fixtureId, commentId) {
+        let fix = dbState.fixtures.find(f => f.id === fixtureId);
+        if(fix && fix.comments) {
+            fix.comments = fix.comments.filter(c => c.id !== commentId);
+            pushData();
+        }
     }
 
     function submitPrediction(fixtureId, selection) {
@@ -742,7 +879,7 @@
         }
 
         if (uniqueRegisteredTeams.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No registered clubs yet. Standings update live on registration!</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No registered clubs yet.</td></tr>`;
         } else {
             uniqueRegisteredTeams.forEach((team, index) => {
                 let r = document.createElement('tr');
@@ -887,7 +1024,7 @@
     function adminAddFixture() {
         let home = document.getElementById('new-home').value.trim();
         let away = document.getElementById('new-away').value.trim();
-        if(!home || !away) return alert("Fill in both team fields!");
+        if(!home || !away) return alert("Fill in both fields!");
 
         dbState.fixtures.push({
             id: Date.now(),
@@ -895,15 +1032,105 @@
             away: away,
             locked: false,
             score: "",
-            outcome: ""
+            outcome: "",
+            matchday: 0,
+            comments: []
         });
         document.getElementById('new-home').value = "";
         document.getElementById('new-away').value = "";
         pushData();
     }
 
+    // ROUND ROBIN GENERATOR LOGIC
+    function adminGenerateRoundRobin() {
+        let teams = [];
+        let observed = new Set();
+
+        for (let user in dbState.users) {
+            if(dbState.users[user].isFan) continue;
+            let tName = dbState.users[user].teamName;
+            if(tName && !observed.has(tName.toLowerCase())) {
+                observed.add(tName.toLowerCase());
+                teams.push(tName);
+            }
+        }
+
+        if(teams.length < 2) {
+            return alert("You need at least 2 registered participant teams to automatically schedule a league round!");
+        }
+
+        if(!confirm(`Generate full Home & Away fixture list for ${teams.length} teams? This will append new match days to your list.`)) return;
+
+        // Round Robin scheduling algorithm (Circle method)
+        if (teams.length % 2 !== 0) {
+            teams.push("BYE"); // Handle odd count
+        }
+
+        let numTeams = teams.length;
+        let totalRounds = numTeams - 1;
+        let matchesPerRound = numTeams / 2;
+        let scheduledFixtures = [];
+        let baseTime = Date.now();
+
+        // Part 1: First leg (Home matches)
+        for (let round = 0; round < totalRounds; round++) {
+            let matchdayNumber = round + 1;
+            for (let match = 0; match < matchesPerRound; match++) {
+                let home = teams[(round + match) % (numTeams - 1)];
+                let away = teams[(numTeams - 1 - match + round) % (numTeams - 1)];
+                
+                if (match === 0) {
+                    away = teams[numTeams - 1];
+                }
+
+                if(home !== "BYE" && away !== "BYE") {
+                    scheduledFixtures.push({
+                        id: baseTime + Math.random(),
+                        home: home,
+                        away: away,
+                        locked: false,
+                        score: "",
+                        outcome: "",
+                        matchday: matchdayNumber,
+                        comments: []
+                    });
+                }
+            }
+        }
+
+        // Part 2: Second leg (Reverse Away matches)
+        for (let round = 0; round < totalRounds; round++) {
+            let matchdayNumber = totalRounds + round + 1;
+            for (let match = 0; match < matchesPerRound; match++) {
+                let away = teams[(round + match) % (numTeams - 1)];
+                let home = teams[(numTeams - 1 - match + round) % (numTeams - 1)];
+                
+                if (match === 0) {
+                    home = teams[numTeams - 1];
+                }
+
+                if(home !== "BYE" && away !== "BYE") {
+                    scheduledFixtures.push({
+                        id: baseTime + Math.random() + 5000,
+                        home: home,
+                        away: away,
+                        locked: false,
+                        score: "",
+                        outcome: "",
+                        matchday: matchdayNumber,
+                        comments: []
+                    });
+                }
+            }
+        }
+
+        dbState.fixtures = dbState.fixtures.concat(scheduledFixtures);
+        pushData();
+        alert("League Round-Robin scheduled successfully!");
+    }
+
     function adminWipeFixtures() {
-        if(confirm("Wipe all active matches?")) {
+        if(confirm("Wipe all active matches and comment logs?")) {
             dbState.fixtures = [];
             pushData();
         }
@@ -922,11 +1149,12 @@
         const container = document.getElementById('admin-fixtures-list');
         container.innerHTML = "";
         dbState.fixtures.forEach(fix => {
+            let tag = fix.matchday > 0 ? `[MD ${fix.matchday}] ` : '[Manual] ';
             let div = document.createElement('div');
             div.style.padding = "12px 0";
             div.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span><b>${fix.home} vs ${fix.away}</b></span>
+                    <span><b>${tag}${fix.home} vs ${fix.away}</b></span>
                     <div>
                         <input type="text" id="score-${fix.id}" placeholder="e.g. 2-1" style="width:70px; padding:6px;" value="${fix.score || ''}">
                         <button class="btn-success" style="padding: 6px 12px; background:var(--accent-blue);" onclick="settleMatch(${fix.id})">Settle</button>
