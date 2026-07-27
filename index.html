@@ -245,12 +245,6 @@
             margin-bottom: 10px;
         }
 
-        .match-action-row {
-            margin-top: 5px;
-            margin-bottom: 12px;
-            text-align: right;
-        }
-
         .done-btn {
             background-color: #cbd5e1;
             color: var(--text-dark);
@@ -297,16 +291,6 @@
             justify-content: space-between;
         }
 
-        .matchday-header {
-            background: var(--accent-purple);
-            color: white;
-            padding: 8px 15px;
-            border-radius: 6px;
-            margin-top: 25px;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-
         .btn-group {
             display: flex;
             gap: 8px;
@@ -342,7 +326,7 @@
             cursor: not-allowed;
         }
 
-        input[type="text"], input[type="password"], textarea, select {
+        input[type="text"], input[type="password"], input[type="number"], textarea, select {
             background-color: #ffffff;
             border: 2px solid #cbd5e1;
             color: var(--text-dark);
@@ -586,7 +570,7 @@
 
 <script>
     const BIN_ID = '6a632995da38895dfe88fbfc'; 
-    const SECRET_KEY = '$2a$10$LnRR7.WaC/FO4X0yPuJ0XedNXXhZ/Y2nb8erhagnR3NQCTjIskqya'; 
+    const SECRET_KEY = '$2a$10$j71KpoJEGGWCN3o/PeJAE.NBq3imw15CmuzL8peGjyG8rSUq/HwAC'; 
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
     const TOURNAMENT_START_DATE = new Date("2026-08-01T00:00:00"); 
@@ -636,12 +620,19 @@
 
     async function fetchData(isInitial) {
         try {
-            let headers = { "X-Master-Key": SECRET_KEY };
+            let headers = { 
+                "X-Master-Key": SECRET_KEY,
+                "Content-Type": "application/json"
+            };
             if (isInitial) headers["X-Bin-Meta"] = "false"; 
             
             const response = await fetch(API_URL + (isInitial ? "" : "/latest"), { headers: headers });
-            const data = await response.json();
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
             dbState = data.record ? data.record : data;
 
             if(!dbState.users) dbState.users = {};
@@ -701,7 +692,7 @@
                 renderUI();
             }
         } catch (error) {
-            console.error("Live loop active...");
+            console.error("Live loop active error:", error);
         }
     }
 
@@ -735,6 +726,7 @@
 
         if(currentUser && dbState.users[currentUser]) {
             const userObj = dbState.users[currentUser];
+            document.getElementById('active-user').innerText = currentUser;
             document.getElementById('active-team').innerText = userObj.isFan ? "Fan Room Mode" : (userObj.teamName || 'N/A');
             document.getElementById('active-role').innerText = userObj.isFan ? "📢 FAN" : "⚽ PARTICIPANT";
             document.getElementById('active-role').style.background = userObj.isFan ? "rgba(136, 0, 255, 0.1)" : "rgba(0, 119, 255, 0.1)";
