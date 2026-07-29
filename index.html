@@ -60,12 +60,6 @@
             padding: 6px 16px;
             border-radius: 20px;
             backdrop-filter: blur(5px);
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-
-        .status-bar:hover {
-            background: rgba(255, 255, 255, 0.35);
         }
 
         .grid {
@@ -365,40 +359,6 @@
         h2, h3 {
             color: var(--accent-purple);
         }
-
-        /* Modal styling for online list */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 24px;
-            border-radius: 16px;
-            max-width: 400px;
-            width: 90%;
-            max-height: 450px;
-            overflow-y: auto;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-
-        .online-user-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #f1f5f9;
-        }
     </style>
 </head>
 <body>
@@ -406,18 +366,10 @@
 <div class="container">
     <header>
         <h1>🏆 INTERNATIONAL DLS LEAGUE</h1>
-        <div class="status-bar" id="online-counter" onclick="openOnlineModal()">
-            🟢 0 participants online
+        <div class="status-bar">
+            <span id="online-counter">🟢 0 participants online</span>
         </div>
     </header>
-
-    <div id="online-modal" class="modal-overlay hidden" onclick="closeOnlineModal()">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 style="margin-top:0; border-bottom: 2px solid var(--accent-blue); padding-bottom: 8px;">Active Participants</h3>
-            <div id="online-users-list" style="margin-top:12px;"></div>
-            <button class="btn-success" style="width:100%; margin-top:15px; background:var(--accent-blue);" onclick="closeOnlineModal()">Close View</button>
-        </div>
-    </div>
 
     <div class="card" id="auth-panel">
         <div id="register-username-view">
@@ -558,7 +510,6 @@
                     <li>Select <b>1</b> for a Home Team win.</li>
                     <li>Select <b>X</b> to predict a Draw game.</li>
                     <li>Select <b>2</b> for an Away Team win.</li>
-                    <li>Predictions lock **10 minutes** after you select them!</li>
                     <li>Matches lock instantly when marked <b>Done</b> or settled.</li>
                     <li>Earn <b>+5 points</b> for every correct slip.</li>
                     <li>Matches marked <b>N/A</b> give both clubs 0 goals & 0 pts.</li>
@@ -614,6 +565,16 @@
         return diffDays + 1; 
     }
 
+    function checkLocalSession() {
+        if(currentUser) {
+            document.getElementById('register-username-view').classList.add('hidden');
+            document.getElementById('register-team-view').classList.add('hidden');
+            document.getElementById('recover-view').classList.add('hidden');
+            document.getElementById('welcome-view').classList.remove('hidden');
+            document.getElementById('active-user').innerText = currentUser;
+        }
+    }
+
     async function fetchData(isInitial) {
         try {
             let headers = { "X-Master-Key": SECRET_KEY };
@@ -637,10 +598,6 @@
                 }
                 if (!dbState.users[name].predictions) {
                     dbState.users[name].predictions = {};
-                    updateNeeded = true;
-                }
-                if (!dbState.users[name].predictionTimes) {
-                    dbState.users[name].predictionTimes = {};
                     updateNeeded = true;
                 }
                 if (dbState.users[name].isFan === undefined) {
@@ -701,7 +658,7 @@
             if (now - lastSeen < 15000) dynamicOnlineCount++;
         }
 
-        document.getElementById('online-counter').innerText = `🟢 ${dynamicOnlineCount} participant${dynamicOnlineCount !== 1 ? 's' : ''} online (Click to view)`;
+        document.getElementById('online-counter').innerText = `🟢 ${dynamicOnlineCount} participant${dynamicOnlineCount !== 1 ? 's' : ''} online`;
         document.getElementById('admin-visits').innerText = `📊 ${dbState.visits || 0} visits`;
 
         if(currentUser && dbState.users[currentUser]) {
@@ -714,45 +671,11 @@
         }
 
         updateSelectorDropdowns();
+
         renderFixtures();
         renderStandings();
         renderChat();
         renderAdminPanel();
-    }
-
-    function openOnlineModal() {
-        const modal = document.getElementById('online-modal');
-        const listContainer = document.getElementById('online-users-list');
-        listContainer.innerHTML = "";
-        
-        let now = Date.now();
-        let usersFound = false;
-
-        for (let name in dbState.users) {
-            let userObj = dbState.users[name];
-            let lastSeen = userObj.lastSeen || 0;
-            let isOnline = (now - lastSeen < 15000);
-            
-            let row = document.createElement('div');
-            row.className = "online-user-row";
-            
-            let statusIndicator = isOnline ? `<span style="color:var(--accent-green)">🟢 Active Now</span>` : `<span style="color:var(--text-muted)">⚫ Offline</span>`;
-            let identityText = userObj.isFan ? `📢 ${name} (Fan)` : `⚽ ${name} [${userObj.teamName}]`;
-            
-            row.innerHTML = `<span><b>${identityText}</b></span> <span>${statusIndicator}</span>`;
-            listContainer.appendChild(row);
-            usersFound = true;
-        }
-
-        if(!usersFound) {
-            listContainer.innerHTML = `<p style="color:var(--text-muted); font-style:italic;">No registered profiles found.</p>`;
-        }
-
-        modal.classList.remove('hidden');
-    }
-
-    function closeOnlineModal() {
-        document.getElementById('online-modal').classList.add('hidden');
     }
 
     function updateSelectorDropdowns() {
@@ -811,8 +734,7 @@
             points: 0,
             correct: 0,
             lastSeen: Date.now(),
-            predictions: {},
-            predictionTimes: {}
+            predictions: {}
         };
         currentUser = username;
         localStorage.setItem('dls_user', username);
@@ -832,8 +754,7 @@
             points: 0,
             correct: 0,
             lastSeen: Date.now(),
-            predictions: {},
-            predictionTimes: {}
+            predictions: {}
         };
         currentUser = tempUsername;
         localStorage.setItem('dls_user', tempUsername);
@@ -861,16 +782,6 @@
         document.getElementById('welcome-view').classList.add('hidden');
         document.getElementById('register-username-view').classList.remove('hidden');
         pushData();
-    }
-
-    function checkLocalSession() {
-        if(currentUser) {
-            document.getElementById('register-username-view').classList.add('hidden');
-            document.getElementById('register-team-view').classList.add('hidden');
-            document.getElementById('recover-view').classList.add('hidden');
-            document.getElementById('welcome-view').classList.remove('hidden');
-            document.getElementById('active-user').innerText = currentUser;
-        }
     }
 
     function renderFixtures() {
@@ -907,8 +818,10 @@
         let userSelection = (currentUser && dbState.users[currentUser]?.predictions) ? dbState.users[currentUser].predictions[fix.id] : null;
         let isLocked = fix.locked;
 
+        // Extract logged-in player's team name
         let playerTeam = (currentUser && dbState.users[currentUser]) ? dbState.users[currentUser].teamName : "";
         
+        // Check if current logged-in user belongs to either the Home team or Away team
         let isMatchPlayer = false;
         if (playerTeam && !dbState.users[currentUser].isFan) {
             isMatchPlayer = (playerTeam.toLowerCase() === fix.home.toLowerCase() || playerTeam.toLowerCase() === fix.away.toLowerCase());
@@ -922,17 +835,6 @@
             labelText = `Final Score: ${fix.score}`;
         } else if (fix.locked) {
             labelText = '🔒 Match in progress / Done (Slips Locked)';
-        }
-
-        if (currentUser && dbState.users[currentUser].predictionTimes && dbState.users[currentUser].predictionTimes[fix.id] && !fix.locked && !fix.settled) {
-            let initialPredictionTime = dbState.users[currentUser].predictionTimes[fix.id];
-            let minutesPassed = Math.floor((Date.now() - initialPredictionTime) / 60000);
-            let timeRemaining = 10 - minutesPassed;
-            if (timeRemaining > 0) {
-                labelText += ` | ⏳ Edit locks in ${timeRemaining}m`;
-            } else {
-                labelText += ` | 🔒 Edit window closed (10m expired)`;
-            }
         }
 
         let row = document.createElement('div');
@@ -950,6 +852,7 @@
         `;
         wrapper.appendChild(row);
 
+        // PLAYER ACTION ROW - Button is disabled unless the user is a match participant
         let actionRow = document.createElement('div');
         actionRow.className = "match-action-row";
         
@@ -999,31 +902,7 @@
         targetContainer.appendChild(wrapper);
     }
 
-    function submitPrediction(fixtureId, selection) {
-        if(!currentUser) return alert("Register or login to pick slips!");
-        
-        let fix = dbState.fixtures.find(f => f.id === fixtureId);
-        if(fix && fix.locked) return alert("This match is locked. Slips cannot be edited!");
-
-        let userObj = dbState.users[currentUser];
-        
-        if(userObj.predictions && userObj.predictions[fixtureId]) {
-            let initialTime = userObj.predictionTimes[fixtureId] || 0;
-            let timeElapsed = Date.now() - initialTime;
-            
-            if(timeElapsed > 600000) { 
-                return alert("Access Denied: 10 minutes have passed since your initial pick. This selection is permanently locked!");
-            }
-        } else {
-            if(!userObj.predictionTimes) userObj.predictionTimes = {};
-            userObj.predictionTimes[fixtureId] = Date.now();
-        }
-
-        userObj.predictions[fixtureId] = selection;
-        renderFixtures();
-        pushData();
-    }
-
+    // Locks the choices securely with team ownership validation
     function markMatchAsDone(fixtureId) {
         if(!currentUser) return alert("Log in to verify match completion status!");
         
@@ -1032,6 +911,7 @@
 
         let playerTeam = dbState.users[currentUser]?.teamName || "";
         
+        // Strict verification rule check
         if (!playerTeam || (playerTeam.toLowerCase() !== fix.home.toLowerCase() && playerTeam.toLowerCase() !== fix.away.toLowerCase())) {
             return alert("Access Denied: Only the specific teams assigned to this fixture can declare it done!");
         }
@@ -1064,6 +944,17 @@
             fix.comments = fix.comments.filter(c => c.id !== commentId);
             pushData();
         }
+    }
+
+    function submitPrediction(fixtureId, selection) {
+        if(!currentUser) return alert("Register or login to pick slips!");
+        
+        let fix = dbState.fixtures.find(f => f.id === fixtureId);
+        if(fix && fix.locked) return alert("This match is locked. Slips cannot be edited!");
+
+        dbState.users[currentUser].predictions[fixtureId] = selection;
+        renderFixtures();
+        pushData();
     }
 
     function renderStandings() {
@@ -1257,25 +1148,6 @@
         pushData();
     }
 
-    /* FIX #1: Rollback points for users who guessed right on this single match before it is deleted */
-    function adminDeleteSingleFixture(matchId) {
-        if(!confirm("Are you sure you want to permanently delete this single match fixture?")) return;
-        
-        let fix = dbState.fixtures.find(f => f.id === matchId);
-        if (fix && fix.settled && fix.outcome !== "NONE") {
-            for(let name in dbState.users) {
-                if(dbState.users[name].predictions && dbState.users[name].predictions[matchId] === fix.outcome) {
-                    dbState.users[name].points = Math.max(0, (dbState.users[name].points || 0) - 5);
-                    dbState.users[name].correct = Math.max(0, (dbState.users[name].correct || 0) - 1);
-                }
-            }
-        }
-        
-        dbState.fixtures = dbState.fixtures.filter(f => f.id !== matchId);
-        pushData();
-        alert("Match fixture successfully deleted and affected points rolled back.");
-    }
-
     function adminGenerateRoundRobin() {
         let teams = [];
         let observed = new Set();
@@ -1337,20 +1209,10 @@
         alert("League scheduled!");
     }
 
-    /* FIX #2: Full clear reset logic that sets predictions dashboard data back to 0 cleanly */
     function adminWipeFixtures() {
-        if(confirm("Wipe all matches? This will also completely reset all player prediction scores to 0!")) {
+        if(confirm("Wipe all matches?")) {
             dbState.fixtures = [];
-            
-            for(let name in dbState.users) {
-                dbState.users[name].points = 0;
-                dbState.users[name].correct = 0;
-                dbState.users[name].predictions = {};
-                dbState.users[name].predictionTimes = {};
-            }
-            
             pushData();
-            alert("All fixtures cleared and user predictor scores reset to 0.");
         }
     }
 
@@ -1364,7 +1226,7 @@
     function renderAdminPanel() {
         if(!isAdmin) return;
         
-        if (document.activeElement && (document.activeElement.id.startsWith('score-') || document.activeElement.id === 'admin-matchday-view-select')) {
+        if (document.activeElement && document.activeElement.id.startsWith('score-')) {
             renderAdminUserTable(); 
             return;
         }
@@ -1419,12 +1281,11 @@
             div.style.padding = "12px 0";
             div.style.borderBottom = "1px solid #e2e8f0";
             div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span><b>${tag}${fix.home} vs ${fix.away}</b> <small style="margin-left:8px; color:var(--text-muted)">(${statusTag})</small></span>
-                    <div style="display:flex; gap:8px; align-items:center;">
+                    <div>
                         <input type="text" id="score-${fix.id}" placeholder="e.g. 2-1 or N/A" style="width:100px; padding:6px; text-transform:uppercase;" value="${fix.score || ''}">
                         <button class="btn-success" style="padding: 6px 12px; background:var(--accent-blue);" onclick="settleMatch(${fix.id})">Settle</button>
-                        <button style="background:#ff3b3b; color:white; padding: 6px 10px; border-radius:8px; font-size:12px;" onclick="adminDeleteSingleFixture(${fix.id})">❌ Delete</button>
                     </div>
                 </div>
             `;
