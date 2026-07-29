@@ -75,14 +75,14 @@
             <p class="small-muted">Club: <b id="active-team" style="color:var(--o)"></b></p>
             <div style="display:flex;gap:8px">
               <button id="btn-logout" class="btn">Log Out</button>
-              <button id="btn-sync-now" class="btn btn-primary">Sync with Cloud</button>
+              <button id="btn-export-local" class="btn">Export Local JSON</button>
             </div>
           </div>
         </section>
 
         <section id="fixtures-tab" class="card tab-content">
           <h2 style="margin-top:0">1X2 Full Time Predictions & Match Center</h2>
-          <p class="small-muted">Predict 1 (Home), X (Draw), or 2 (Away). Data syncs via JSONBin.</p>
+          <p class="small-muted">Predict 1 (Home), X (Draw), or 2 (Away). Comments and chat are synced via JSONBin.</p>
           <div id="fixtures-list" style="margin-top:12px"></div>
         </section>
 
@@ -116,8 +116,14 @@
 
           <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
             <button id="btn-clear-fixtures" class="btn btn-danger">Clear All Match Fixtures</button>
-            <button id="btn-pull-server" class="btn">Pull Cloud → Local</button>
-            <button id="btn-push-server" class="btn btn-accent">Push Local → Cloud</button>
+            <button id="btn-pull-server" class="btn">Pull Server State → Local</button>
+            <button id="btn-push-server" class="btn btn-accent">Push Local → Server</button>
+            <input id="admin-file-input" type="file" accept="application/json" style="display:none" />
+            <button id="btn-import-local-file" class="btn">Import JSON → Local</button>
+          </div>
+
+          <div style="margin-top:12px;color:var(--muted)">
+            <small>Note: Connected directly to JSONBin using your embedded Master Key.</small>
           </div>
         </section>
       </main>
@@ -129,7 +135,7 @@
             <li>Select <b>1</b> for a Home Team win.</li>
             <li>Select <b>X</b> to predict a Draw.</li>
             <li>Select <b>2</b> for an Away Team win.</li>
-            <li>Click <b>Sync with Cloud</b> to get the latest updates.</li>
+            <li>Comments and chat sync directly with your cloud bin.</li>
           </ul>
         </div>
       </aside>
@@ -140,11 +146,11 @@
     // Direct JSONBin Configuration
     const BIN_ID = '6a632995da38895dfe88fbfc';
     const MASTER_KEY = '$2a$10$LnRR7.WaC/FO4X0yPuJ0XedNXXhZ/Y2nb8erhagnR3NQCTjIskqya';
-    const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-
+    
     const STORAGE_KEY = 'dls_state_v1';
     const USER_KEY = 'dls_user';
 
+    // Utilities
     function uid() { return Date.now() + Math.floor(Math.random()*1000); }
     function elt(tag, props={}, ...children) {
       const e = document.createElement(tag);
@@ -155,64 +161,71 @@
       }
       return e;
     }
+    function safeText(node, text) { node.textContent = text ?? ''; }
 
+    // Load/save local cache
     function loadLocal() {
       try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; }
     }
     function saveLocal(state) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) { console.error(e); } }
 
+    // App state
     let dbState = loadLocal() || { users: {}, fixtures: [], chat: [], visits: 0 };
     let currentUser = localStorage.getItem(USER_KEY) || null;
     let editChatId = null;
 
-    // Fetch from JSONBin
+    // Fetch server state directly from JSONBin API
     async function fetchServerState() {
       try {
-        const r = await fetch(BIN_URL + '/latest', {
+        const r = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
           headers: { 'X-Master-Key': MASTER_KEY }
         });
-        if (!r.ok) throw new Error('Failed to fetch cloud state: ' + r.status);
+        if (!r.ok) throw new Error('Failed to fetch server state: ' + r.status);
         const json = await r.json();
-        return json.record;
+        return json.record || json;
       } catch (err) {
         console.error(err);
         return null;
       }
     }
 
-    // Push to JSONBin
+    // Push local state directly to JSONBin API
     async function pushStateToServer() {
       try {
-        const r = await fetch(BIN_URL, {
+        const r = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Master-Key': MASTER_KEY
+          headers: { 
+            'Content-Type': 'application/json', 
+            'X-Master-Key': MASTER_KEY 
           },
           body: JSON.stringify(dbState)
         });
-        if (!r.ok) throw new Error('Push failed: ' + r.status);
-        alert('Successfully pushed state to cloud!');
+        if (!r.ok) {
+          const text = await r.text();
+          alert('Push failed: ' + r.status + ' ' + text);
+          return;
+        }
+        alert('Push to server was successful.');
       } catch (err) {
         console.error(err);
         alert('Push error: see console.');
       }
     }
 
-    // Tabs
+    // UI: tabs
     document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
       document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       const tab = btn.getAttribute('data-tab');
-      document.getElementById('fixtures-tab').style.display = tab === 'fixtures-tab' ? 'block' : 'none';
-      document.getElementById('standings-tab').style.display = tab === 'standings-tab' ? 'block' : 'none';
-      document.getElementById('chat-tab').style.display = tab === 'chat-tab' ? 'block' : 'none';
-      document.getElementById('admin-tab').style.display = tab === 'admin-tab' ? 'block' : 'none';
+      document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+      document.getElementById('fixtures-tab').style.display = tab === 'fixtures' || tab === 'fixtures-tab' ? 'block' : 'none';
+      document.getElementById('standings-tab').style.display = tab === 'standings' || tab === 'standings-tab' ? 'block' : 'none';
+      document.getElementById('chat-tab').style.display = tab === 'chat' || tab === 'chat-tab' ? 'block' : 'none';
+      document.getElementById('admin-tab').style.display = tab === 'admin' || tab === 'admin-tab' ? 'block' : 'none';
     }));
 
-    // Registration logic
+    // Registration
     function validUsername(u) { return /^[A-Za-z0-9_]{3,20}$/.test(u); }
-    let tempUsername = null;
 
     document.getElementById('btn-register').addEventListener('click', () => {
       const raw = (document.getElementById('reg-username').value || '').trim();
@@ -224,6 +237,7 @@
       document.getElementById('reg-teamname').focus();
     });
 
+    let tempUsername = null;
     document.getElementById('btn-complete-registration').addEventListener('click', () => {
       const team = (document.getElementById('reg-teamname').value || '').trim();
       const username = tempUsername;
@@ -232,7 +246,6 @@
       currentUser = username;
       localStorage.setItem(USER_KEY, currentUser);
       saveLocal(dbState);
-      pushStateToServer(); // Auto-sync to cloud
       tempUsername = null;
       document.getElementById('register-team-view').style.display = 'none';
       updateAuthViews();
@@ -247,28 +260,26 @@
       currentUser = raw;
       localStorage.setItem(USER_KEY, currentUser);
       saveLocal(dbState);
-      pushStateToServer(); // Auto-sync to cloud
       updateAuthViews();
       renderAll();
     });
 
     document.getElementById('btn-logout').addEventListener('click', () => {
+      if (currentUser && dbState.users[currentUser]) dbState.users[currentUser].lastSeen = 0;
       currentUser = null;
       localStorage.removeItem(USER_KEY);
+      saveLocal(dbState);
       updateAuthViews();
       renderAll();
     });
 
-    document.getElementById('btn-sync-now').addEventListener('click', async () => {
-      const server = await fetchServerState();
-      if (server) {
-        dbState = server;
-        saveLocal(dbState);
-        renderAll();
-        alert('Synced successfully with cloud!');
-      } else {
-        alert('Sync failed.');
-      }
+    document.getElementById('btn-export-local').addEventListener('click', () => {
+      const data = JSON.stringify(dbState, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'dls_local_state.json'; a.click();
+      URL.revokeObjectURL(url);
     });
 
     function updateAuthViews() {
@@ -285,7 +296,7 @@
       }
     }
 
-    // Render Fixtures, Standings, Chat
+    // Fixtures rendering
     function renderFixtures() {
       const container = document.getElementById('fixtures-list');
       container.innerHTML = '';
@@ -293,99 +304,308 @@
         container.appendChild(elt('div', {}, 'No match fixtures listed yet.'));
         return;
       }
-      dbState.fixtures.forEach(fix => {
-        const wrap = elt('div', { class: 'prediction-wrapper' });
-        const top = elt('div', { style: 'display:flex;justify-content:space-between;align-items:center' });
-        top.appendChild(elt('div', {}, elt('div', { style: 'font-weight:800' }, `${fix.home} vs ${fix.away}`)));
-        
-        const btnGroup = elt('div');
-        ['1','X','2'].forEach(choice => {
-          const btn = elt('button', { class: 'predict-btn' }, choice);
-          const userSelection = currentUser && dbState.users[currentUser]?.predictions?.[String(fix.id)];
-          if (userSelection === choice) btn.classList.add('selected');
-          btn.addEventListener('click', () => {
-            if (!currentUser) return alert('Log in to submit predictions.');
-            dbState.users[currentUser].predictions = dbState.users[currentUser].predictions || {};
-            dbState.users[currentUser].predictions[String(fix.id)] = choice;
+      const mdMap = {};
+      dbState.fixtures.forEach(f => {
+        const md = f.matchday || 0;
+        mdMap[md] = mdMap[md] || [];
+        mdMap[md].push(f);
+      });
+      Object.keys(mdMap).sort((a,b)=>a-b).forEach(mdKey => {
+        const md = parseInt(mdKey,10);
+        const header = elt('div', { class: 'matchday-header' }, md === 0 ? '⚡ MANUAL / SINGLE MATCHES' : `📅 MATCHDAY ${md}`);
+        container.appendChild(header);
+        mdMap[md].forEach(fix => {
+          const wrap = elt('div', { class: 'prediction-wrapper' });
+          const top = elt('div', { style: 'display:flex;justify-content:space-between;align-items:center' });
+          const left = elt('div', {}, elt('div', { style: 'font-weight:800' }, `${fix.home} vs ${fix.away}`),
+                                    elt('div', { class: 'small-muted' }, fix.locked ? `Result: ${fix.score || 'N/A'}` : '⌛ Awaiting Kick-off'));
+          const btnGroup = elt('div');
+          ['1','X','2'].forEach(choice => {
+            const btn = elt('button', { class: 'predict-btn' }, choice);
+            const userSelection = currentUser && dbState.users[currentUser] && dbState.users[currentUser].predictions ? dbState.users[currentUser].predictions[String(fix.id)] : null;
+            if (userSelection === choice) btn.classList.add('selected');
+            if (fix.locked) btn.disabled = true;
+            btn.addEventListener('click', () => {
+              if (!currentUser) return alert('Log in to submit predictions.');
+              dbState.users[currentUser].predictions = dbState.users[currentUser].predictions || {};
+              dbState.users[currentUser].predictions[String(fix.id)] = choice;
+              dbState.users[currentUser].lastSeen = Date.now();
+              saveLocal(dbState);
+              renderFixtures();
+            });
+            btnGroup.appendChild(btn);
+          });
+          top.appendChild(left); top.appendChild(btnGroup);
+          wrap.appendChild(top);
+
+          const commentsBox = elt('div', { style: 'margin-top:10px;background:#fff;padding:8px;border-radius:8px;border:1px solid #e9eef6' });
+          const commentsList = elt('div', { style: 'max-height:140px;overflow:auto;margin-bottom:8px' });
+          if (fix.comments && fix.comments.length) {
+            fix.comments.forEach(c => {
+              const item = elt('div', { style: 'display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9' });
+              const leftc = elt('div');
+              leftc.appendChild(elt('strong', {}, c.user));
+              leftc.appendChild(document.createTextNode(': ' + c.text));
+              const rightc = elt('div', { class: 'small-muted' }, c.time);
+              if (currentUser && c.user === currentUser) {
+                const del = elt('button', { class: 'btn', style: 'margin-left:6px' }, 'Delete');
+                del.addEventListener('click', () => {
+                  fix.comments = (fix.comments || []).filter(x => x.id !== c.id);
+                  saveLocal(dbState);
+                  renderFixtures();
+                });
+                rightc.appendChild(del);
+              }
+              item.appendChild(leftc); item.appendChild(rightc);
+              commentsList.appendChild(item);
+            });
+          } else {
+            commentsList.appendChild(elt('div', { class: 'small-muted' }, 'No comments yet. Be the first to analyze!'));
+          }
+          const commentRow = elt('div', { style: 'display:flex;gap:8px;margin-top:8px' });
+          const commInput = elt('input', { type: 'text', placeholder: 'Write match comment...' });
+          commInput.style.flex = '1';
+          const commBtn = elt('button', { class: 'btn btn-primary' }, 'Comment');
+          commBtn.addEventListener('click', () => {
+            const txt = (commInput.value || '').trim();
+            if (!txt) return;
+            if (!currentUser) return alert('Log in to post comments.');
+            fix.comments = fix.comments || [];
+            fix.comments.push({ id: uid(), user: currentUser, text: txt, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
+            commInput.value = '';
             saveLocal(dbState);
-            pushStateToServer(); // Sync choice to cloud
             renderFixtures();
           });
-          btnGroup.appendChild(btn);
+          commentRow.appendChild(commInput); commentRow.appendChild(commBtn);
+          commentsBox.appendChild(commentsList); commentsBox.appendChild(commentRow);
+          wrap.appendChild(commentsBox);
+
+          container.appendChild(wrap);
         });
-        top.appendChild(btnGroup);
-        wrap.appendChild(top);
-        container.appendChild(wrap);
       });
     }
 
+    // Standings rendering
     function renderStandings() {
       const wrapper = document.getElementById('league-table-wrapper');
-      wrapper.innerHTML = 'Table loading...';
-      // Basic placeholder for table rendering
+      wrapper.innerHTML = '';
+      const teams = [];
+      const seen = new Set();
+      Object.values(dbState.users || {}).forEach(u => {
+        if (u.isFan) return;
+        const t = (u.teamName || 'Unnamed Team').trim();
+        const key = t.toLowerCase();
+        if (!seen.has(key)) { seen.add(key); teams.push({ name: t, p:0,w:0,d:0,l:0,gd:0,pts:0 }); }
+      });
+      if (!teams.length) {
+        wrapper.appendChild(elt('div', { class: 'small-muted' }, 'No registered clubs yet.'));
+      } else {
+        const table = elt('table', { style: 'width:100%;border-collapse:collapse' });
+        const thead = elt('thead', {}, elt('tr', {}, elt('th', {}, 'Pos'), elt('th', {}, 'Team'), elt('th', {}, 'P'), elt('th', {}, 'W'), elt('th', {}, 'D'), elt('th', {}, 'L'), elt('th', {}, 'GD'), elt('th', {}, 'Pts')));
+        table.appendChild(thead);
+        const tbody = elt('tbody');
+        teams.forEach((t,i)=> {
+          const tr = elt('tr', {});
+          tr.appendChild(elt('td', {}, String(i+1)));
+          tr.appendChild(elt('td', {}, t.name));
+          tr.appendChild(elt('td', {}, String(t.p)));
+          tr.appendChild(elt('td', {}, String(t.w)));
+          tr.appendChild(elt('td', {}, String(t.d)));
+          tr.appendChild(elt('td', {}, String(t.l)));
+          tr.appendChild(elt('td', {}, String(t.gd)));
+          tr.appendChild(elt('td', {}, String(t.pts)));
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        wrapper.appendChild(table);
+      }
+
+      const pWrap = document.getElementById('predictor-table-wrapper');
+      pWrap.innerHTML = '';
+      const users = Object.values(dbState.users || {}).slice().sort((a,b)=> (b.points||0)-(a.points||0));
+      if (!users.length) {
+        pWrap.appendChild(elt('div', { class: 'small-muted' }, 'No registered users yet.'));
+      } else {
+        const table = elt('table', { style: 'width:100%;border-collapse:collapse' });
+        table.appendChild(elt('thead', {}, elt('tr', {}, elt('th', {}, 'Pos'), elt('th', {}, 'User'), elt('th', {}, 'Role/Team'), elt('th', {}, 'Correct'), elt('th', {}, 'Points'))));
+        const tbody = elt('tbody');
+        users.forEach((u,i) => {
+          const tr = elt('tr', {});
+          tr.appendChild(elt('td', {}, String(i+1)));
+          tr.appendChild(elt('td', {}, u.username || ''));
+          tr.appendChild(elt('td', {}, u.isFan ? 'Fan' : (u.teamName || '')));
+          tr.appendChild(elt('td', {}, String(u.correct || 0)));
+          tr.appendChild(elt('td', {}, String(u.points || 0)));
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        pWrap.appendChild(table);
+      }
     }
+
+    // Chat functions
+    document.getElementById('chat-submit').addEventListener('click', () => {
+      const el = document.getElementById('chat-input');
+      const text = (el.value || '').trim();
+      if (!text) return;
+      if (!currentUser) return alert('You must register (locally) to post messages.');
+      if (!Array.isArray(dbState.chat)) dbState.chat = [];
+      if (editChatId) {
+        const m = dbState.chat.find(x => x.id === editChatId);
+        if (m) { m.msg = text; m.edited = true; }
+        editChatId = null;
+        document.getElementById('chat-cancel-edit').style.display = 'none';
+      } else {
+        dbState.chat.push({ id: uid(), user: currentUser, msg: text, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
+      }
+      el.value = '';
+      saveLocal(dbState);
+      renderChat();
+    });
+
+    document.getElementById('chat-cancel-edit').addEventListener('click', () => {
+      editChatId = null;
+      document.getElementById('chat-input').value = '';
+      document.getElementById('chat-cancel-edit').style.display = 'none';
+    });
 
     function renderChat() {
       const box = document.getElementById('chat-box');
       box.innerHTML = '';
       (dbState.chat || []).forEach(m => {
         const msg = elt('div', { style: 'padding:8px;border-radius:8px;background:#fff;margin-bottom:8px;border:1px solid #eef2f7' });
-        msg.appendChild(elt('strong', {}, m.user + ': '));
-        msg.appendChild(document.createTextNode(m.msg));
+        const header = elt('div', { style: 'display:flex;justify-content:space-between' });
+        const left = elt('div', {}, elt('strong', {}, m.user), m.edited ? elt('span', { style: 'margin-left:6px;color:var(--muted);font-size:12px' }, '(edited)') : null);
+        const right = elt('div', { style: 'color:var(--muted);font-size:12px' }, m.time);
+        header.appendChild(left); header.appendChild(right);
+        const body = elt('div', { style: 'margin-top:8px;white-space:pre-wrap' }, m.msg);
+        msg.appendChild(header); msg.appendChild(body);
+        if (currentUser && m.user === currentUser) {
+          const ctrl = elt('div', { style: 'margin-top:8px;display:flex;gap:8px' });
+          const editBtn = elt('button', { class: 'btn' }, 'Edit');
+          editBtn.addEventListener('click', () => {
+            editChatId = m.id;
+            document.getElementById('chat-input').value = m.msg;
+            document.getElementById('chat-cancel-edit').style.display = 'inline-block';
+          });
+          const delBtn = elt('button', { class: 'btn' }, 'Delete');
+          delBtn.addEventListener('click', () => {
+            if (!confirm('Delete message?')) return;
+            dbState.chat = (dbState.chat || []).filter(x => x.id !== m.id);
+            saveLocal(dbState); renderChat();
+          });
+          ctrl.appendChild(editBtn); ctrl.appendChild(delBtn);
+          msg.appendChild(ctrl);
+        }
         box.appendChild(msg);
       });
+      box.scrollTop = box.scrollHeight;
     }
 
-    document.getElementById('chat-submit').addEventListener('click', () => {
-      const el = document.getElementById('chat-input');
-      const text = (el.value || '').trim();
-      if (!text) return;
-      if (!currentUser) return alert('You must register to post messages.');
-      dbState.chat = dbState.chat || [];
-      dbState.chat.push({ id: uid(), user: currentUser, msg: text, time: new Date().toLocaleTimeString() });
-      el.value = '';
-      saveLocal(dbState);
-      pushStateToServer(); // Sync chat message live
-      renderChat();
+    // Admin actions
+    document.getElementById('btn-add-fixture').addEventListener('click', () => {
+      const home = (document.getElementById('new-home').value || '').trim();
+      const away = (document.getElementById('new-away').value || '').trim();
+      if (!home || !away) return alert('Enter both home and away team names.');
+      dbState.fixtures = dbState.fixtures || [];
+      dbState.fixtures.push({ id: uid(), home, away, matchday:0, comments: [], locked:false, score: '' });
+      document.getElementById('new-home').value = ''; document.getElementById('new-away').value = '';
+      saveLocal(dbState); renderFixtures();
     });
 
-    // Admin buttons
-    document.getElementById('btn-add-fixture').addEventListener('click', () => {
-      const home = document.getElementById('new-home').value.trim();
-      const away = document.getElementById('new-away').value.trim();
-      if (!home || !away) return alert('Enter teams.');
-      dbState.fixtures = dbState.fixtures || [];
-      dbState.fixtures.push({ id: uid(), home, away, matchday: 0, comments: [], locked: false });
-      document.getElementById('new-home').value = '';
-      document.getElementById('new-away').value = '';
-      saveLocal(dbState);
-      pushStateToServer();
-      renderFixtures();
+    document.getElementById('btn-clear-fixtures').addEventListener('click', () => {
+      if (!confirm('Clear all fixtures locally?')) return;
+      dbState.fixtures = []; saveLocal(dbState); renderFixtures();
+    });
+
+    document.getElementById('btn-generate-roundrobin').addEventListener('click', () => {
+      const allTeams = Object.values(dbState.users || {}).filter(u => !u.isFan).map(u => u.teamName).filter(Boolean);
+      if (allTeams.length < 2) return alert('Need at least 2 teams to generate schedule.');
+      const teams = allTeams.slice();
+      const hasBye = teams.length % 2 === 1;
+      if (hasBye) teams.push('BYE');
+      const rounds = teams.length - 1;
+      const half = teams.length / 2;
+      const schedule = [];
+      const arr = teams.slice();
+      for (let r = 0; r < rounds; r++) {
+        for (let i = 0; i < half; i++) {
+          const t1 = arr[i];
+          const t2 = arr[arr.length - 1 - i];
+          if (t1 !== 'BYE' && t2 !== 'BYE') schedule.push({ id: uid(), home: t1, away: t2, matchday: r+1, comments: [], locked:false, score:'' });
+        }
+        arr.splice(1, 0, arr.pop());
+      }
+      const full = schedule.concat(schedule.map(s => ({ ...s, id: uid(), home: s.away, away: s.home, matchday: s.matchday + rounds })));
+      dbState.fixtures = (dbState.fixtures || []).concat(full);
+      saveLocal(dbState); renderFixtures();
+      alert('Round-robin generated locally.');
     });
 
     document.getElementById('btn-pull-server').addEventListener('click', async () => {
-      const server = await fetchServerState();
-      if (server) { dbState = server; saveLocal(dbState); renderAll(); alert('Pulled from cloud!'); }
+      if (!confirm('Pull server state into local (will overwrite local)?')) return;
+      const json = await fetchServerState();
+      if (!json) return alert('Failed to fetch server state.');
+      dbState = json; saveLocal(dbState); renderAll(); alert('Pulled server state into local.');
     });
 
-    document.getElementById('btn-push-server').addEventListener('click', pushStateToServer);
+    document.getElementById('btn-push-server').addEventListener('click', async () => {
+      if (!confirm('Push local state to server (replace server record)?')) return;
+      await pushStateToServer();
+    });
+
+    document.getElementById('btn-import-local-file').addEventListener('click', () => {
+      document.getElementById('admin-file-input').click();
+    });
+    document.getElementById('admin-file-input').addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          const rec = parsed && parsed.record ? parsed.record : parsed;
+          dbState = rec; saveLocal(dbState); renderAll(); alert('Imported JSON into local state.');
+        } catch (err) {
+          alert('Invalid JSON file.');
+        }
+      };
+      reader.readAsText(f);
+      e.target.value = '';
+    });
+
+    function updateOnlineCounter() {
+      const now = Date.now();
+      const online = Object.values(dbState.users || {}).filter(u => (u.lastSeen || 0) + 15000 > now).length;
+      document.getElementById('online-counter').textContent = `🟢 ${online} participant${online !== 1 ? 's' : ''} online`;
+    }
 
     function renderAll() {
       updateAuthViews();
       renderFixtures();
       renderStandings();
       renderChat();
+      updateOnlineCounter();
     }
 
-    // Initialize on load
     (async function init() {
-      const server = await fetchServerState();
-      if (server) {
-        dbState = server;
-        saveLocal(dbState);
+      try {
+        const server = await fetchServerState();
+        if (server) {
+          if (!loadLocal()) { dbState = server; saveLocal(dbState); }
+        }
+      } catch (e) {
+        console.warn('Could not fetch server state on init.', e);
       }
+      if (!dbState.users) dbState.users = {};
+      if (!Array.isArray(dbState.fixtures)) dbState.fixtures = [];
+      if (!Array.isArray(dbState.chat)) dbState.chat = [];
+      updateAuthViews();
       renderAll();
+      setInterval(updateOnlineCounter, 5000);
     })();
+
+    window.dls = { getState: () => dbState, save: () => saveLocal(dbState), fetchServer: fetchServerState, pushServer: pushStateToServer };
   </script>
 </body>
 </html>
