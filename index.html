@@ -398,6 +398,11 @@
             padding: 8px 0;
             border-bottom: 1px solid #f1f5f9;
         }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+        }
     </style>
 </head>
 <body>
@@ -528,7 +533,7 @@
                     </div>
 
                     <h3>Manual Add / Score Settlement Center</h3>
-                    <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+                    <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
                         <input type="text" id="new-home" placeholder="Home Team Name" style="flex-grow: 1;">
                         <input type="text" id="new-away" placeholder="Away Team Name" style="flex-grow: 1;">
                         <input type="text" id="new-matchday" placeholder="Matchday (e.g. 1)" style="width: 120px;">
@@ -692,6 +697,14 @@
         }
     }
 
+    function checkLocalSession() {
+        if (currentUser) {
+            document.getElementById('register-username-view').classList.add('hidden');
+            document.getElementById('welcome-view').classList.remove('hidden');
+            document.getElementById('active-user').innerText = currentUser;
+        }
+    }
+
     function renderUI() {
         let now = Date.now();
         let dynamicOnlineCount = 0;
@@ -806,19 +819,20 @@
 
         dbState.users[username] = {
             pin: Math.floor(1000 + Math.random() * 9000).toString(),
-            teamName: "",
             isFan: true,
-            points: 0,
-            correct: 0,
-            lastSeen: Date.now(),
+            teamName: "Fan Room Mode",
             predictions: {},
-            predictionTimes: {}
+            predictionTimes: {},
+            lastSeen: Date.now()
         };
 
         currentUser = username;
         localStorage.setItem('dls_user', username);
+        document.getElementById('active-user').innerText = username;
+        toggleAuthViews('register');
+        document.getElementById('register-username-view').classList.add('hidden');
+        document.getElementById('welcome-view').classList.remove('hidden');
         pushData();
-        checkLocalSession();
     }
 
     function completeRegistration() {
@@ -827,33 +841,36 @@
 
         dbState.users[tempUsername] = {
             pin: Math.floor(1000 + Math.random() * 9000).toString(),
-            teamName: team,
             isFan: false,
-            points: 0,
-            correct: 0,
-            lastSeen: Date.now(),
+            teamName: team,
             predictions: {},
-            predictionTimes: {}
+            predictionTimes: {},
+            lastSeen: Date.now()
         };
 
         currentUser = tempUsername;
         localStorage.setItem('dls_user', tempUsername);
+        document.getElementById('active-user').innerText = tempUsername;
+        document.getElementById('register-team-view').classList.add('hidden');
+        document.getElementById('welcome-view').classList.remove('hidden');
         pushData();
-        checkLocalSession();
     }
 
     function recoverAccount() {
         let username = document.getElementById('rec-username').value.trim();
         let pin = document.getElementById('rec-pin').value.trim();
-        
+
         if(dbState.users[username] && dbState.users[username].pin === pin) {
             currentUser = username;
             localStorage.setItem('dls_user', username);
-            dbState.users[username].lastSeen = Date.now();
-            pushData();
-            checkLocalSession();
+            document.getElementById('active-user').innerText = username;
+            toggleAuthViews('register');
+            document.getElementById('register-username-view').classList.add('hidden');
+            document.getElementById('welcome-view').classList.remove('hidden');
+            renderUI();
+            alert("Welcome back!");
         } else {
-            alert("Invalid account references.");
+            alert("Incorrect username or recovery Pin!");
         }
     }
 
@@ -863,358 +880,389 @@
         }
         localStorage.removeItem('dls_user');
         currentUser = null;
+        document.getElementById('welcome-view').classList.add('hidden');
+        document.getElementById('register-username-view').classList.remove('hidden');
+        document.getElementById('reg-username').value = "";
+        document.getElementById('reg-teamname').value = "";
         pushData();
-        checkLocalSession();
     }
 
-    function checkLocalSession() {
-        if(currentUser) {
-            document.getElementById('register-username-view').classList.add('hidden');
-            document.getElementById('register-team-view').classList.add('hidden');
-            document.getElementById('recover-view').classList.add('hidden');
-            document.getElementById('welcome-view').classList.remove('hidden');
-            document.getElementById('active-user').innerText = currentUser;
+    function submitPrediction(matchId, pick) {
+        if (!currentUser) return alert("Please register or login to save predictions!");
+        
+        const match = dbState.fixtures.find(f => f.id === matchId);
+        if (!match || match.settled || match.locked) return alert("This match is locked!");
+
+        let userPreds = dbState.users[currentUser].predictions;
+        let userTimes = dbState.users[currentUser].predictionTimes || {};
+
+        if (userPreds[matchId] === pick) {
+            delete userPreds[matchId];
+            delete userTimes[matchId];
         } else {
-            document.getElementById('welcome-view').classList.add('hidden');
-            document.getElementById('register-username-view').classList.remove('hidden');
-        }
-    }
-
-    function savePrediction(matchId, choice) {
-        if(!currentUser) return alert("Please register or login first to make predictions!");
-        
-        let targetMatch = dbState.fixtures.find(f => f.id === matchId);
-        if(!targetMatch || targetMatch.settled || targetMatch.locked) return alert("This match is locked.");
-
-        let userObj = dbState.users[currentUser];
-        let previousTime = userObj.predictionTimes[matchId] || null;
-        
-        if(previousTime && (Date.now() - previousTime > 600000)) {
-            return alert("Your selection has passed the 10-minute modification lock period!");
+            userPreds[matchId] = pick;
+            userTimes[matchId] = Date.now();
         }
 
-        if(!userObj.predictionTimes[matchId]) {
-            userObj.predictionTimes[matchId] = Date.now();
-        }
-
-        userObj.predictions[matchId] = choice;
+        dbState.users[currentUser].predictionTimes = userTimes;
         pushData();
     }
 
     function renderFixtures() {
-        const container = document.getElementById('fixtures-list');
-        container.innerHTML = "";
-        
-        let dayFixtures = dbState.fixtures.filter(f => f.matchday === globalUserMatchdayView);
-        if(dayFixtures.length === 0) {
-            container.innerHTML = `<p style='font-style:italic; color:var(--text-muted);'>No fixtures scheduled for Matchday ${globalUserMatchdayView}.</p>`;
+        const list = document.getElementById('fixtures-list');
+        list.innerHTML = "";
+
+        const filtered = dbState.fixtures.filter(f => f.matchday === globalUserMatchdayView);
+
+        if (filtered.length === 0) {
+            list.innerHTML = `<p style="text-align:center; color:var(--text-muted); font-style:italic; padding:20px;">No fixtures generated for Matchday ${globalUserMatchdayView} yet.</p>`;
             return;
         }
 
-        dayFixtures.forEach(f => {
+        filtered.forEach(f => {
+            let now = Date.now();
+            let isMatchLocked = f.locked || f.settled;
+
+            if (currentUser && dbState.users[currentUser]) {
+                let timeSaved = (dbState.users[currentUser].predictionTimes || {})[f.id] || null;
+                if (timeSaved && (now - timeSaved > 600000)) {
+                    isMatchLocked = true;
+                }
+            }
+
+            let userPick = (currentUser && dbState.users[currentUser].predictions) ? dbState.users[currentUser].predictions[f.id] : null;
+
+            let scoreDisplay = "vs";
+            if (f.settled) {
+                scoreDisplay = f.isNA ? "N/A" : `${f.homeScore} - ${f.awayScore}`;
+            }
+
             let wrapper = document.createElement('div');
             wrapper.className = "prediction-wrapper";
-            
-            let userPick = (currentUser && dbState.users[currentUser].predictions) ? dbState.users[currentUser].predictions[f.id] : null;
-            let pTime = (currentUser && dbState.users[currentUser].predictionTimes) ? dbState.users[currentUser].predictionTimes[f.id] : null;
-            let minutesLeft = "";
-            
-            if(pTime && !f.locked && !f.settled) {
-                let elapsed = Date.now() - pTime;
-                let remaining = Math.max(0, 600000 - elapsed);
-                if(remaining > 0) minutesLeft = ` (Modifiable for ${Math.ceil(remaining/60000)}m)`;
-                else minutesLeft = ` (Locked 🔒)`;
-            }
 
-            let statusLabel = "";
-            if(f.settled) {
-                statusLabel = f.scoreHome === "N/A" ? `<b style="color:var(--text-muted)">[ Settled: N/A ]</b>` : `<b style="color:var(--accent-purple)">[ Result: ${f.scoreHome} - ${f.scoreAway} ]</b>`;
-            } else if(f.locked) {
-                statusLabel = `<b style="color:#ff3b3b">[ Match Running 🔒 ]</b>`;
-            }
-
-            let b1 = `<button class="predict-btn ${userPick==='1'?'selected':''}" onclick="savePrediction(${f.id}, '1')" ${f.locked||f.settled?'disabled':''}>1</button>`;
-            let bx = `<button class="predict-btn ${userPick==='X'?'selected':''}" onclick="savePrediction(${f.id}, 'X')" ${f.locked||f.settled?'disabled':''}>X</button>`;
-            let b2 = `<button class="predict-btn ${userPick==='2'?'selected':''}" onclick="savePrediction(${f.id}, '2')" ${f.locked||f.settled?'disabled':''}>2</button>`;
-
-            let commentsHtml = "";
-            if(f.comments && f.comments.length > 0) {
-                commentsHtml = `<div class="match-comments-section"><div class="match-comments-list">`;
+            let commentsHTML = "";
+            if (f.comments && f.comments.length > 0) {
                 f.comments.forEach(c => {
-                    commentsHtml += `<div class="match-comment-item"><b>${c.user}:</b> <span>${c.msg}</span></div>`;
+                    commentsHTML += `<div class="match-comment-item"><b>${c.user}:</b> <span>${c.text}</span></div>`;
                 });
-                commentsHtml += `</div></div>`;
+            } else {
+                commentsHTML = `<p style="font-size:11px; color:var(--text-muted); margin:5px 0; font-style:italic;">No custom logs posted yet.</p>`;
             }
-
-            let singleCommentInput = `
-                <div style="display:flex; gap:5px; margin-top:8px;">
-                    <input type="text" id="m-comm-${f.id}" placeholder="Write match live observation..." style="flex-grow:1; padding:6px; font-size:12px;">
-                    <button class="btn-success" style="padding:6px 12px; font-size:12px;" onclick="addMatchComment(${f.id})">Comment</button>
-                </div>
-            `;
 
             wrapper.innerHTML = `
                 <div class="prediction-row">
-                    <div>
-                        <span style="font-size:16px; font-weight:bold;">${f.home} vs ${f.away}</span>
-                        <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${statusLabel} ${minutesLeft}</div>
-                    </div>
-                    <div class="btn-group">${b1}${bx}${b2}</div>
+                    <div style="flex:1; font-weight:bold;">${f.home}</div>
+                    <div style="padding:4px 12px; background:var(--text-dark); color:white; border-radius:6px; font-weight:bold; margin:0 15px;">${scoreDisplay}</div>
+                    <div style="flex:1; font-weight:bold; text-align:right;">${f.away}</div>
                 </div>
-                ${commentsHtml}
-                ${currentUser ? singleCommentInput : ''}
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <span style="font-size:11px; color:white; background:${isMatchLocked ? '#ef4444':'var(--accent-green)'}; padding:3px 8px; border-radius:10px; font-weight:bold;">
+                            ${isMatchLocked ? '🔒 Locked' : '📥 Open'}
+                        </span>
+                    </div>
+                    <div class="btn-group">
+                        <button class="predict-btn ${userPick === '1' ? 'selected':''}" ${isMatchLocked ? 'disabled':''} onclick="submitPrediction(${f.id}, '1')">1</button>
+                        <button class="predict-btn ${userPick === 'X' ? 'selected':''}" ${isMatchLocked ? 'disabled':''} onclick="submitPrediction(${f.id}, 'X')">X</button>
+                        <button class="predict-btn ${userPick === '2' ? 'selected':''}" ${isMatchLocked ? 'disabled':''} onclick="submitPrediction(${f.id}, '2')">2</button>
+                    </div>
+                </div>
+                <div class="match-comments-section" style="margin-top:12px;">
+                    <span style="font-size:11px; font-weight:bold; color:var(--accent-purple)">📢 Match Highlights / Custom Logs:</span>
+                    <div class="match-comments-list">${commentsHTML}</div>
+                    <div style="display:flex; gap:5px; margin-top:5px;">
+                        <input type="text" id="mmsg-${f.id}" placeholder="Add live highlight note..." style="padding:6px; font-size:12px; flex-grow:1;">
+                        <button class="btn-success" style="padding:6px 12px; font-size:12px; background:var(--accent-purple);" onclick="sendMatchComment(${f.id})">Log</button>
+                    </div>
+                </div>
             `;
-            container.appendChild(wrapper);
+            list.appendChild(wrapper);
         });
     }
 
-    function addMatchComment(matchId) {
-        let input = document.getElementById(`m-comm-${matchId}`);
+    function sendMatchComment(matchId) {
+        if(!currentUser) return alert("Login to post match logs!");
+        let input = document.getElementById(`mmsg-${matchId}`);
         let text = input.value.trim();
         if(!text) return;
-        
+
         let match = dbState.fixtures.find(f => f.id === matchId);
         if(match) {
             if(!match.comments) match.comments = [];
-            match.comments.push({ user: currentUser, msg: text, time: Date.now() });
+            match.comments.push({ user: currentUser, text: text });
             input.value = "";
             pushData();
         }
     }
 
     function renderStandings() {
-        let tableData = {};
-        
-        for (let name in dbState.users) {
-            let u = dbState.users[name];
-            if(!u.isFan && u.teamName) {
-                tableData[u.teamName] = { name: u.teamName, p:0, w:0, d:0, l:0, gd:0, pts:0 };
+        let tableHTML = "";
+        let teamStats = {};
+
+        for (let u in dbState.users) {
+            if (!dbState.users[u].isFan && dbState.users[u].teamName) {
+                teamStats[dbState.users[u].teamName] = { name: dbState.users[u].teamName, p:0, w:0, d:0, l:0, gd:0, pts:0 };
             }
         }
 
         dbState.fixtures.forEach(f => {
-            if(f.settled && f.scoreHome !== "N/A") {
-                let sh = parseInt(f.scoreHome);
-                let sa = parseInt(f.scoreAway);
-                
-                if(!tableData[f.home]) tableData[f.home] = { name: f.home, p:0, w:0, d:0, l:0, gd:0, pts:0 };
-                if(!tableData[f.away]) tableData[f.away] = { name: f.away, p:0, w:0, d:0, l:0, gd:0, pts:0 };
+            if (f.settled) {
+                if (!teamStats[f.home]) teamStats[f.home] = { name: f.home, p:0, w:0, d:0, l:0, gd:0, pts:0 };
+                if (!teamStats[f.away]) teamStats[f.away] = { name: f.away, p:0, w:0, d:0, l:0, gd:0, pts:0 };
 
-                let tH = tableData[f.home];
-                let tA = tableData[f.away];
+                if (f.isNA) {
+                    teamStats[f.home].p += 1;
+                    teamStats[f.away].p += 1;
+                } else {
+                    let hG = parseInt(f.homeScore || 0);
+                    let aG = parseInt(f.awayScore || 0);
 
-                tH.p++; tA.p++;
-                tH.gd += (sh - sa);
-                tA.gd += (sa - sh);
+                    teamStats[f.home].p += 1;
+                    teamStats[f.away].p += 1;
+                    teamStats[f.home].gd += (hG - aG);
+                    teamStats[f.away].gd += (aG - hG);
 
-                if(sh > sa) { tH.w++; tH.pts += 3; tA.l++; }
-                else if(sa > sh) { tA.w++; tA.pts += 3; tH.l++; }
-                else { tH.d++; tH.pts += 1; tA.d++; tA.pts += 1; }
-            }
-        });
-
-        let sortedTeams = Object.values(tableData).sort((a,b) => b.pts - a.pts || b.gd - a.gd || b.w - a.w);
-        let tbody = document.getElementById('league-table').querySelector('tbody');
-        tbody.innerHTML = "";
-        
-        sortedTeams.forEach((t, idx) => {
-            let tr = document.createElement('tr');
-            tr.innerHTML = `<td><b>${idx+1}</b></td><td><b>${t.name}</b></td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gd}</td><td><b style="color:var(--accent-purple)">${t.pts}</b></td>`;
-            tbody.appendChild(tr);
-        });
-
-        for (let name in dbState.users) {
-            let u = dbState.users[name];
-            u.correct = 0;
-            u.points = 0;
-            
-            for(let mId in u.predictions) {
-                let match = dbState.fixtures.find(f => f.id == mId);
-                if(match && match.settled) {
-                    let actualChoice = "N/A";
-                    if(match.scoreHome !== "N/A") {
-                        let sh = parseInt(match.scoreHome);
-                        let sa = parseInt(match.scoreAway);
-                        actualChoice = sh > sa ? "1" : (sa > sh ? "2" : "X");
-                    }
-                    if(u.predictions[mId] === actualChoice && actualChoice !== "N/A") {
-                        u.correct++;
-                        u.points += 5;
+                    if (hG > aG) {
+                        teamStats[f.home].w += 1;
+                        teamStats[f.home].pts += 3;
+                        teamStats[f.away].l += 1;
+                    } else if (aG > hG) {
+                        teamStats[f.away].w += 1;
+                        teamStats[f.away].pts += 3;
+                        teamStats[f.home].l += 1;
+                    } else {
+                        teamStats[f.home].d += 1;
+                        teamStats[f.home].pts += 1;
+                        teamStats[f.away].d += 1;
+                        teamStats[f.away].pts += 1;
                     }
                 }
             }
-        }
-
-        let sortedPredictors = [];
-        for (let name in dbState.users) {
-            sortedPredictors.push({ username: name, ...dbState.users[name] });
-        }
-        sortedPredictors.sort((a,b) => b.points - a.points || b.correct - a.correct);
-
-        let pbody = document.getElementById('predictor-table').querySelector('tbody');
-        pbody.innerHTML = "";
-        sortedPredictors.forEach((p, idx) => {
-            let info = p.isFan ? "📢 Fan Profile" : `⚽ ${p.teamName}`;
-            let tr = document.createElement('tr');
-            tr.innerHTML = `<td>${idx+1}</td><td><b>${p.username}</b></td><td>${info}</td><td>${p.correct}</td><td><b style="color:var(--accent-green)">${p.points} pts</b></td>`;
-            pbody.appendChild(tr);
         });
+
+        let sortedTeams = Object.values(teamStats).sort((a,b) => b.pts - a.pts || b.gd - a.gd || b.w - a.w);
+        sortedTeams.forEach((t, i) => {
+            tableHTML += `<tr><td><b>${i+1}</b></td><td>⚽ <b>${t.name}</b></td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gd}</td><td style="color:var(--accent-blue); font-weight:bold;">${t.pts}</td></tr>`;
+        });
+        document.getElementById('league-table').querySelector('tbody').innerHTML = tableHTML || `<tr><td colspan="8" style="text-align:center;">No teams or completed records available.</td></tr>`;
+
+        let predictorHTML = "";
+        let userRankings = [];
+
+        for (let username in dbState.users) {
+            let userObj = dbState.users[username];
+            let correctCount = 0;
+
+            for (let mId in userObj.predictions) {
+                let match = dbState.fixtures.find(f => f.id == mId);
+                if (match && match.settled && !match.isNA) {
+                    let realOutcome = "X";
+                    if (parseInt(match.homeScore) > parseInt(match.awayScore)) realOutcome = "1";
+                    if (parseInt(match.awayScore) > parseInt(match.homeScore)) realOutcome = "2";
+
+                    if (userObj.predictions[mId] === realOutcome) {
+                        correctCount++;
+                    }
+                }
+            }
+
+            userRankings.push({
+                username: username,
+                roleInfo: userObj.isFan ? "📢 Fan Lounge Profile" : `⚽ ${userObj.teamName}`,
+                correct: correctCount,
+                points: correctCount * 5
+            });
+        }
+
+        userRankings.sort((a,b) => b.points - a.points || b.correct - a.correct);
+        userRankings.forEach((u, idx) => {
+            let medal = "";
+            if(idx === 0) medal = "🥇 ";
+            if(idx === 1) medal = "🥈 ";
+            if(idx === 2) medal = "🥉 ";
+            predictorHTML += `<tr><td>${medal || idx+1}</td><td><b>${u.username}</b></td><td>${u.roleInfo}</td><td>${u.correct}</td><td style="color:var(--accent-green); font-weight:bold;">+${u.points} pts</td></tr>`;
+        });
+        document.getElementById('predictor-table').querySelector('tbody').innerHTML = predictorHTML || `<tr><td colspan="5" style="text-align:center;">No user prediction records found.</td></tr>`;
     }
 
     function renderChat() {
         const box = document.getElementById('chat-box');
-        let shouldScroll = (box.scrollTop + box.clientHeight >= box.scrollHeight - 30);
-        
         box.innerHTML = "";
+
         dbState.chat.forEach(msg => {
-            let row = document.createElement('div');
-            row.className = "chat-msg";
-            
+            let item = document.createElement('div');
+            item.className = "chat-msg";
+
             let actions = "";
-            if(currentUser === msg.user) {
+            if (currentUser && (msg.user === currentUser || isAdmin)) {
                 actions = `
                     <div class="chat-actions">
-                        <button onclick="enterEditMode('${msg.id}', \`${msg.text.replace(/"/g, '&quot;')}\`)">Edit</button>
-                        <button class="btn-delete-chat" onclick="deleteChat('${msg.id}')">Delete</button>
+                        <button onclick="enterEditMode(${msg.id}, '${escapeJSString(msg.text)}')">Edit</button>
+                        <button class="btn-delete-chat" onclick="deleteChat(${msg.id})">Delete</button>
                     </div>
                 `;
             }
 
-            row.innerHTML = `
+            item.innerHTML = `
                 <div class="chat-header">
-                    <span class="chat-username">${msg.user}</span>
-                    <div style="display:flex; align-items:center;">
-                        <span>${new Date(msg.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                        ${actions}
-                    </div>
+                    <span><span class="chat-username">${msg.user}</span> <span style="font-size:10px; color:#9ca3af; margin-left:5px;">${msg.time || ''}</span></span>
+                    ${actions}
                 </div>
                 <div style="word-break: break-word;">${msg.text}</div>
             `;
-            box.appendChild(row);
+            box.appendChild(item);
         });
+    }
 
-        if(shouldScroll) box.scrollTop = box.scrollHeight;
+    function escapeJSString(str) {
+        return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
     }
 
     function sendChat() {
-        if(!currentUser) return alert("Log in to participate in the chat room.");
-        let input = document.getElementById('chat-input');
-        let text = input.value.trim();
-        if(!text) return;
+        if (!currentUser) return alert("Please log in first to contribute to the Fan Zone!");
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if (!text) return;
 
-        if(editChatId) {
-            let match = dbState.chat.find(c => c.id === editChatId);
-            if(match && match.user === currentUser) {
-                match.text = text;
+        if (editChatId !== null) {
+            let target = dbState.chat.find(m => m.id === editChatId);
+            if (target) {
+                target.text = text;
             }
             cancelEditMode();
         } else {
+            let timeString = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             dbState.chat.push({
-                id: 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                id: Date.now(),
                 user: currentUser,
                 text: text,
-                time: Date.now()
+                time: timeString
             });
         }
+
         input.value = "";
         pushData();
     }
 
-    function enterEditMode(id, currentText) {
-        editChatId = id;
+    function enterEditMode(msgId, currentText) {
+        editChatId = msgId;
         document.getElementById('chat-input').value = currentText;
-        document.getElementById('chat-submit-btn').innerText = "Save";
         document.getElementById('edit-indicator').classList.remove('hidden');
+        document.getElementById('chat-submit-btn').innerText = "Update";
     }
 
     function cancelEditMode() {
         editChatId = null;
         document.getElementById('chat-input').value = "";
-        document.getElementById('chat-submit-btn').innerText = "Post";
         document.getElementById('edit-indicator').classList.add('hidden');
+        document.getElementById('chat-submit-btn').innerText = "Post";
     }
 
-    function deleteChat(id) {
-        dbState.chat = dbState.chat.filter(c => c.id !== id);
+    function deleteChat(msgId) {
+        dbState.chat = dbState.chat.filter(m => m.id !== msgId);
         pushData();
     }
 
     function verifyAdmin() {
         let pass = document.getElementById('admin-pass').value;
-        if(pass === "DlsMaster2026") {
+        if (pass === "DLSADMIN2026") {
             isAdmin = true;
             document.getElementById('admin-login-box').classList.add('hidden');
             document.getElementById('admin-controls').classList.remove('hidden');
             renderAdminPanel();
         } else {
-            alert("Unauthorized admin credential key.");
+            alert("Unauthorized admin access code rejection!");
         }
     }
 
     function renderAdminPanel() {
-        if(!isAdmin) return;
+        if (!isAdmin) return;
 
-        let container = document.getElementById('admin-fixtures-list');
-        container.innerHTML = "<h3>Settle Real-Time Matches</h3>";
+        let tableBody = document.getElementById('admin-user-table').querySelector('tbody');
+        tableBody.innerHTML = "";
 
-        if(dbState.fixtures.length === 0) {
-            container.innerHTML += `<p style="font-style:italic; color:var(--text-muted);">No managed league matches mapped yet.</p>`;
-        } else {
-            dbState.fixtures.forEach(f => {
-                let div = document.createElement('div');
-                div.style = "background: white; border:1px solid #cbd5e1; padding:12px; margin-bottom:8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;";
-                
-                let controls = "";
-                if(!f.settled) {
-                    controls = `
-                        <div>
-                            <input type="text" id="home-s-${f.id}" placeholder="H" style="width:30px; padding:4px; margin-right:4px; text-align:center;">
-                            <input type="text" id="away-s-${f.id}" placeholder="A" style="width:30px; padding:4px; margin-right:8px; text-align:center;">
-                            <button class="done-btn" style="background:var(--accent-green); color:white; border:none;" onclick="adminSettleMatch(${f.id}, false)">Settle</button>
-                            <button class="done-btn" onclick="adminSettleMatch(${f.id}, true)">N/A</button>
-                            <button class="done-btn" style="background:var(--accent-orange); color:white; border:none;" onclick="adminToggleLock(${f.id})">${f.locked?'Unlock':'Lock Live'}</button>
-                        </div>
-                    `;
-                } else {
-                    controls = `<span style="color:var(--text-muted); font-size:13px;">Settled (${f.scoreHome}-${f.scoreAway}) <a href="#" style="color:#ff3b3b; margin-left:8px;" onclick="adminResetMatch(${f.id})">Reset</a></span>`;
-                }
-
-                div.innerHTML = `<span><b>[MD ${f.matchday}]</b> ${f.home} vs ${f.away}</span> ${controls}`;
-                container.appendChild(div);
-            });
+        for (let u in dbState.users) {
+            let row = document.createElement('tr');
+            let profileLabel = dbState.users[u].isFan ? `📢 Fan Account` : `⚽ Member`;
+            row.innerHTML = `
+                <td><b>${u}</b></td>
+                <td>${profileLabel} [${dbState.users[u].teamName || 'N/A'}]</td>
+                <td><code style="background:#f1f5f9; padding:4px 8px; font-weight:bold; color:var(--accent-orange); border-radius:4px;">${dbState.users[u].pin}</code></td>
+                <td><button style="padding:4px 8px; font-size:11px; background:#ff3b3b; color:white;" onclick="adminForceDeleteUser('${u}')">Wipe User</button></td>
+            `;
+            tableBody.appendChild(row);
         }
 
-        let tbody = document.getElementById('admin-user-table').querySelector('tbody');
-        tbody.innerHTML = "";
-        for(let name in dbState.users) {
-            let u = dbState.users[name];
-            let row = document.createElement('tr');
-            row.innerHTML = `
-                <td><b>${name}</b></td>
-                <td>${u.isFan?'Fan Profile':u.teamName}</td>
-                <td><code>${u.pin}</code></td>
-                <td><button style="padding:4px 8px; font-size:11px; background:#ff3b3b; color:white;" onclick="adminDeleteUser('${name}')">Delete Account</button></td>
+        let flist = document.getElementById('admin-fixtures-list');
+        flist.innerHTML = "<h3>Score Settler Matrix</h3>";
+
+        if(dbState.fixtures.length === 0) {
+            flist.innerHTML += "<p style='font-style:italic; font-size:13px;'>Create schedules to settle operational match profiles.</p>";
+            return;
+        }
+
+        dbState.fixtures.forEach(f => {
+            let selectRow = `
+                <div style="padding:10px; border-bottom:1px solid var(--border-color); display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:#ffffff;">
+                    <span style="width:90px; font-size:12px; font-weight:bold; color:white; background:var(--accent-purple); padding:2px 6px; border-radius:4px;">MD ${f.matchday}</span>
+                    <span style="flex-grow:1; font-weight:bold;">${f.home} vs ${f.away}</span>
+                    <input type="text" id="scr-h-${f.id}" value="${f.homeScore !== undefined ? f.homeScore:''}" placeholder="H" style="width:35px; padding:4px; text-align:center;">
+                    <input type="text" id="scr-a-${f.id}" value="${f.awayScore !== undefined ? f.awayScore:''}" placeholder="A" style="width:35px; padding:4px; text-align:center;">
+                    <button class="done-btn" ${f.settled ? 'disabled':''} onclick="adminSetScore(${f.id}, false)">Save Result</button>
+                    <button class="done-btn" style="background:#64748b; color:white;" ${f.settled ? 'disabled':''} onclick="adminSetScore(${f.id}, true)">Mark N/A</button>
+                    <button style="background:#ff3b3b; color:white; padding:6px 10px; font-size:12px;" onclick="adminRemoveSingleFixture(${f.id})">❌</button>
+                </div>
             `;
-            tbody.appendChild(row);
+            flist.innerHTML += selectRow;
+        });
+    }
+
+    function adminForceDeleteUser(username) {
+        if(confirm(`Are you completely sure you want to delete profile: ${username}?`)) {
+            delete dbState.users[username];
+            if(currentUser === username) {
+                localStorage.removeItem('dls_user');
+                currentUser = null;
+                location.reload();
+            } else {
+                pushData();
+            }
+        }
+    }
+
+    function adminForceLockMatch(matchId) {
+        let match = dbState.fixtures.find(f => f.id === matchId);
+        if(match) {
+            match.locked = !match.locked;
+            pushData();
+        }
+    }
+
+    function adminForceUnlockMatch(matchId) {
+        let match = dbState.fixtures.find(f => f.id === matchId);
+        if(match) {
+            match.locked = false;
+            pushData();
         }
     }
 
     function adminAddFixture() {
-        let home = document.getElementById('new-home').value.trim();
-        let away = document.getElementById('new-away').value.trim();
-        let md = parseInt(document.getElementById('new-matchday').value.trim()) || 1;
+        let h = document.getElementById('new-home').value.trim();
+        let a = document.getElementById('new-away').value.trim();
+        let md = parseInt(document.getElementById('new-matchday').value.trim() || "1");
 
-        if(!home || !away) return alert("Enter team descriptors.");
+        if(!h || !a) return alert("Provide real Home and Away team labels!");
 
         dbState.fixtures.push({
-            id: Date.now(),
-            home: home,
-            away: away,
+            id: Date.now() + Math.floor(Math.random()*100),
+            home: h,
+            away: a,
             matchday: md,
-            locked: false,
+            homeScore: 0,
+            awayScore: 0,
             settled: false,
-            scoreHome: "",
-            scoreAway: "",
+            locked: false,
+            isNA: false,
             comments: []
         });
 
@@ -1223,134 +1271,117 @@
         pushData();
     }
 
-    function adminToggleLock(id) {
-        let match = dbState.fixtures.find(f => f.id === id);
-        if(match) {
-            match.locked = !match.locked;
-            pushData();
-        }
+    function adminRemoveSingleFixture(matchId) {
+        dbState.fixtures = dbState.fixtures.filter(f => f.id !== matchId);
+        pushData();
     }
 
-    function adminSettleMatch(id, isNA) {
-        let match = dbState.fixtures.find(f => f.id === id);
+    function adminSetScore(matchId, forceNA) {
+        let match = dbState.fixtures.find(f => f.id === matchId);
         if(match) {
-            if(isNA) {
-                match.scoreHome = "N/A";
-                match.scoreAway = "N/A";
+            if(forceNA) {
+                match.settled = true;
+                match.locked = true;
+                match.isNA = true;
+                match.homeScore = 0;
+                match.awayScore = 0;
             } else {
-                let h = document.getElementById(`home-s-${id}`).value.trim();
-                let a = document.getElementById(`away-s-${id}`).value.trim();
-                if(h === "" || a === "") return alert("Input accurate metrics scores.");
-                match.scoreHome = h;
-                match.scoreAway = a;
+                let hS = document.getElementById(`scr-h-${matchId}`).value.trim();
+                let aS = document.getElementById(`scr-a-${matchId}`).value.trim();
+                if(hS === "" || aS === "") return alert("Please enter both dynamic score slots!");
+                
+                match.homeScore = parseInt(hS);
+                match.awayScore = parseInt(aS);
+                match.settled = true;
+                match.locked = true;
+                match.isNA = false;
             }
-            match.settled = true;
-            match.locked = true;
-            pushData();
-        }
-    }
-
-    function adminResetMatch(id) {
-        let match = dbState.fixtures.find(f => f.id === id);
-        if(match) {
-            match.settled = false;
-            match.locked = false;
-            match.scoreHome = "";
-            match.scoreAway = "";
-            pushData();
-        }
-    }
-
-    function adminWipeFixtures() {
-        if(confirm("Confirm action wiping out all managed global fixture records data?")) {
-            dbState.fixtures = [];
-            pushData();
-        }
-    }
-
-    function adminDeleteUser(username) {
-        if(confirm(`Completely remove account session logs metrics for ${username}?`)) {
-            delete dbState.users[username];
             pushData();
         }
     }
 
     function adminGenerateRoundRobin() {
-        let teams = [];
-        for (let name in dbState.users) {
-            if (!dbState.users[name].isFan && dbState.users[name].teamName) {
-                teams.push(dbState.users[name].teamName);
+        let teamNames = [];
+        for (let u in dbState.users) {
+            if (!dbState.users[u].isFan && dbState.users[u].teamName) {
+                teamNames.push(dbState.users[u].teamName);
             }
         }
 
-        if (teams.length < 2) return alert("You need at least 2 non-fan registered teams to generate a schedule!");
-
-        if (teams.length % 2 !== 0) {
-            teams.push("BYE"); 
+        if (teamNames.length < 2) {
+            return alert("Need at least 2 active Participant clubs registered to construct Round-Robin matrix!");
         }
 
-        let numTeams = teams.length;
-        let rounds = numTeams - 1;
-        let matchesPerRound = numTeams / 2;
-        let newFixtures = [];
+        if (teamNames.length % 2 !== 0) {
+            teamNames.push("BYE ROOM");
+        }
+
+        let numTeams = teamNames.length;
+        let rounds = (numTeams - 1) * 2; 
+        let fixturesPerRound = numTeams / 2;
+
+        let generatedFixtures = [];
         let idCounter = Date.now();
 
-        // Generate Home matches
         for (let round = 0; round < rounds; round++) {
-            for (let match = 0; match < matchesPerRound; match++) {
-                let home = teams[(round + match) % (numTeams - 1)];
-                let away = teams[(numTeams - 1 - match + round) % (numTeams - 1)];
+            let isSecondHalf = round >= (numTeams - 1);
+            let actualRoundIndex = round % (numTeams - 1);
+            let matchdayNumber = round + 1;
+
+            for (let match = 0; match < fixturesPerRound; match++) {
+                let homeIdx = (actualRoundIndex + match) % (numTeams - 1);
+                let awayIdx = (numTeams - 1 - match + actualRoundIndex) % (numTeams - 1);
 
                 if (match === 0) {
-                    away = teams[numTeams - 1];
+                    awayIdx = numTeams - 1;
                 }
 
-                if (home !== "BYE" && away !== "BYE") {
-                    newFixtures.push({
-                        id: idCounter++,
-                        home: home,
-                        away: away,
-                        matchday: round + 1,
-                        locked: false,
+                let homeTeam = teamNames[homeIdx];
+                let awayTeam = teamNames[awayIdx];
+
+                if (homeTeam === "BYE ROOM" || awayTeam === "BYE ROOM") continue;
+
+                idCounter++;
+                if (isSecondHalf) {
+                    generatedFixtures.push({
+                        id: idCounter,
+                        home: awayTeam,
+                        away: homeTeam,
+                        matchday: matchdayNumber,
+                        homeScore: 0,
+                        awayScore: 0,
                         settled: false,
-                        scoreHome: "",
-                        scoreAway: "",
+                        locked: false,
+                        isNA: false,
+                        comments: []
+                    });
+                } else {
+                    generatedFixtures.push({
+                        id: idCounter,
+                        home: homeTeam,
+                        away: awayTeam,
+                        matchday: matchdayNumber,
+                        homeScore: 0,
+                        awayScore: 0,
+                        settled: false,
+                        locked: false,
+                        isNA: false,
                         comments: []
                     });
                 }
             }
         }
 
-        // Generate Away (Reverse) matches
-        let homeRoundsCount = rounds;
-        for (let round = 0; round < rounds; round++) {
-            for (let match = 0; match < matchesPerRound; match++) {
-                let away = teams[(round + match) % (numTeams - 1)];
-                let home = teams[(numTeams - 1 - match + round) % (numTeams - 1)];
-
-                if (match === 0) {
-                    home = teams[numTeams - 1];
-                }
-
-                if (home !== "BYE" && away !== "BYE") {
-                    newFixtures.push({
-                        id: idCounter++,
-                        home: home,
-                        away: away,
-                        matchday: homeRoundsCount + round + 1,
-                        locked: false,
-                        settled: false,
-                        scoreHome: "",
-                        scoreAway: "",
-                        comments: []
-                    });
-                }
-            }
-        }
-
-        dbState.fixtures = newFixtures;
+        dbState.fixtures = generatedFixtures;
         pushData();
-        alert(`Successfully generated a complete Home/Away Round-Robin schedule spanning ${rounds * 2} Matchdays!`);
+        alert(`Successfully auto-scheduled ${generatedFixtures.length} league match profiles!`);
+    }
+
+    function adminWipeFixtures() {
+        if(confirm("DANGER! Wipe the entire fixtures collection down to an empty setup?")) {
+            dbState.fixtures = [];
+            pushData();
+        }
     }
 </script>
 </body>
